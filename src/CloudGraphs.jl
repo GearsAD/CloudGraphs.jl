@@ -6,21 +6,28 @@ Pkg.clone("https://github.com/Lytol/Mongo.jl")
 export CloudGraphConfiguration, CloudGraph
 #Functions
 export open, close, add_vertex!, add_vertex!, make_edge, add_edge!
-
+export cloudVertex2ExVertex, exVertex2CloudVertex
 using Graphs;
 using Neo4j;
 using Mongo;
 
-type CloudVertex {
-  # id = {}
-  # labels = List{Any}
-  # properties = Dict{Any, Any} {
-  #   latestEstimate = [0,0,0],
-  #   age = Int64,
-  #   payload = IOBuffer, #Protobuf - either IOBuffer or PipeBuffer
-  #   bigDataMongoKey = Guid,
-  # }
-}
+type CloudVertex
+  packed::Array{UInt8}
+  properties::Dict{AbstractString, Any}
+  bigData::BigData
+  neo4jNodeId::Int
+  isValidNeoNodeId::Bool
+  exVertexId::Int
+  isValidExVertex::Bool
+end
+
+type BigData
+  isRetrieved::Bool
+  isAvailable::Bool
+  isExistingOnServer::Bool
+  mongoKey::Base.Random.UUID
+  data::Any
+end
 
 type CloudEdge {
 
@@ -70,34 +77,52 @@ function disconnect(cloudGraph::CloudGraph)
 end
 
 # --- Common conversion functions ---
-function exVertex2CloudVertex(vertex:ExVertex)
+function exVertex2CloudVertex(vertex::ExVertex)
+  cgvProperties = Dict{AbstractString, Any}();
+
   #1. Get the special attributes - payload, etc.
+  propNames = keys(vertex.attributes);
+  if("bigData" in propNames) #We have big data to save.
+    bigData = vertex.attributes["bigData"];
+  end
+  if("packed" in propNames) #We have protobuf stuff to save in the node.
+    packed = vertex.attributes["packed"];
+    pB = PipeBuffer();
+    writeproto(pB, packed);
+    packedData = pB.data; #UInt8 array.
+  end
   #2. Transfer everything else to properties
-  #3. Encode the payload.
+  for (k,v) in vertex.attributes
+    if(k != "bigData" && k != "packed")
+      cgvProperties[k] = v;
+    end
+  end
+  #3. Encode the packed data and big data.
+  return CloudVertex3(packedData, cgvProperties, bigData, -1, false, -1, false);
 end
 
-function cloudVertex2ExVertex(vertex:CloudVertex)
+function cloudVertex2ExVertex(vertex::CloudVertex)
 
 end
 
 # --- Graphs.jl overloads ---
 
-function add_vertex!(cg:CloudGraph, vertex:ExVertex)
+function add_vertex!(cg::CloudGraph, vertex::ExVertex)
   add_vertex(cg, ExVertex2CloudVertex(vertex));
 end
 
-function add_vertex!(cg:CloudGraph, vertex:CloudVertex)
+function add_vertex!(cg::CloudGraph, vertex::CloudVertex)
 
 end
 
-function make_edge(cg:CloudGraph, vertexSrc:ExVertex, vertexDst:ExVertex)
+function make_edge(cg::CloudGraph, vertexSrc::ExVertex, vertexDst::ExVertex)
 
 end
 
-function make_edge(cg:CloudGraph, vertexSrc:CloudVertex, vertexDst:CloudVertex)
+function make_edge(cg::CloudGraph, vertexSrc::CloudVertex, vertexDst::CloudVertex)
 
 end
 
-function add_edge!(cg:CloudGraph, edge:ExEdge)
+function add_edge!(cg::CloudGraph, edge::ExEdge)
 
 end
