@@ -20,7 +20,7 @@ type PackedDataTest
   string::ASCIIString
   boolmatrix::BitArray{2}
 end
-packed = PackedDataTest(rand(1000,1000), "This is a test string", trues(1000,1000));
+packed = PackedDataTest(rand(10,10), "This is a test string", trues(10,10));
 vertex.attributes["packed"] = packed;
 vertex.attributes["age"] = 64;
 vertex.attributes["latestEstimate"] = [0.0,0.0,0.0];

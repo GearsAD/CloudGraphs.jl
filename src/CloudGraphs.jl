@@ -117,7 +117,7 @@ function add_vertex!(cg::CloudGraph, vertex::ExVertex)
   add_vertex(cg, exVertex2CloudVertex(vertex));
 end
 
-function add_vertex!(cg::CloudGraph, vertex::CloudVertex2)
+function add_vertex!(cg::CloudGraph, vertex::CloudVertex)
   try
     props = deepcopy(vertex.properties);
     # Packed information
@@ -142,6 +142,9 @@ end
 
 function write_BigData(cg::CloudGraph, vertex::CloudVertex)
 
+end
+
+function read_BigData!(vertex::CloudVertex)
 end
 
 function make_edge(cg::CloudGraph, vertexSrc::ExVertex, vertexDst::ExVertex)
