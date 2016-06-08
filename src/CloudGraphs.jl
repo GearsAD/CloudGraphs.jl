@@ -1,3 +1,10 @@
+module CloudGraphs
+
+using Graphs;
+using Neo4j;
+using Mongo;
+using ProtoBuf;
+using JSON;
 
 #Installations
 #Pkg.clone("https://github.com/Lytol/Mongo.jl")
@@ -7,11 +14,6 @@ export CloudGraphConfiguration, CloudGraph
 #Functions
 export open, close, add_vertex!, add_vertex!, make_edge, add_edge!
 export cloudVertex2ExVertex, exVertex2CloudVertex
-using Graphs;
-using Neo4j;
-using Mongo;
-using ProtoBuf;
-using JSON;
 
 type BigData
   isRetrieved::Bool
@@ -114,7 +116,7 @@ end
 # --- Graphs.jl overloads ---
 
 function add_vertex!(cg::CloudGraph, vertex::ExVertex)
-  add_vertex(cg, exVertex2CloudVertex(vertex));
+  add_vertex!(cg, exVertex2CloudVertex(vertex));
 end
 
 function add_vertex!(cg::CloudGraph, vertex::CloudVertex)
@@ -156,5 +158,7 @@ function make_edge(cg::CloudGraph, vertexSrc::CloudVertex, vertexDst::CloudVerte
 end
 
 function add_edge!(cg::CloudGraph, edge::ExEdge)
+
+end
 
 end
