@@ -2,7 +2,7 @@ module CloudGraphs
 
 using Graphs;
 using Neo4j;
-using Mongo;
+# using Mongo;
 using ProtoBuf;
 using JSON;
 
@@ -10,9 +10,9 @@ using JSON;
 #Pkg.clone("https://github.com/Lytol/Mongo.jl")
 
 #Types
-export CloudGraphConfiguration, CloudGraph
+export CloudGraphConfiguration, CloudGraph, CloudVertex, BigData
 #Functions
-export open, close, add_vertex!, add_vertex!, make_edge, add_edge!
+export open, close, add_vertex!, get_vertex, make_edge, add_edge!
 export cloudVertex2ExVertex, exVertex2CloudVertex
 
 type BigData
@@ -115,6 +115,13 @@ end
 
 # --- Graphs.jl overloads ---
 
+function write_BigData(cg::CloudGraph, vertex::CloudVertex)
+
+end
+
+function read_BigData!(vertex::CloudVertex)
+end
+
 function add_vertex!(cg::CloudGraph, vertex::ExVertex)
   add_vertex!(cg, exVertex2CloudVertex(vertex));
 end
@@ -128,25 +135,31 @@ function add_vertex!(cg::CloudGraph, vertex::CloudVertex)
     props["packed"] = pB.data;
     # Big data
     # Write it.
-    write_BigData(cg, vertex);
+    # write_BigData(cg, vertex);
     # Clear the underlying data in the Neo4j dataset and serialize the big data.
     saved = vertex.bigData.data;
     vertex.bigData.data = Vector{UInt8}();
     props["bigData"] = json(vertex.bigData);
     vertex.bigData.data = saved;
     vertex.neo4jNode = Neo4j.createnode(cg.neo4j.graph, props);
-    return props;
+    return vertex.neo4jNode;
   catch e
     rethrow(e);
     return false;
   end
 end
 
-function write_BigData(cg::CloudGraph, vertex::CloudVertex)
-
-end
-
-function read_BigData!(vertex::CloudVertex)
+# Retrieve a vertex and decompress it into a CloudVertex
+function get_vertex(cg::CloudGraph, neoNodeId::Int, retrieveBigData::Bool)
+  try
+    neoNode = Neo4j.getnode(cg.neo4j.graph, neoNodeId);
+    # Get the node properties.
+    props = Neo4j.getnodeproperties(neoNode);
+    # Build a CloudGraph node.
+    return CloudVertex(packed, cgvProperties, bigData, neoNodeId, neoNode, true, -1, false);
+  catch e
+    rethrow(e);
+  end
 end
 
 function make_edge(cg::CloudGraph, vertexSrc::ExVertex, vertexDst::ExVertex)
