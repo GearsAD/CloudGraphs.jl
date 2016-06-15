@@ -22,6 +22,7 @@ type BigData
   mongoKey::AbstractString
   data::Any
   BigData(isRetrieved, isAvailable, isExistingOnServer, data) = new(isRetrieved, isAvailable, isExistingOnServer, string(Base.Random.uuid4()), data)
+  BigData(isRetrieved, isAvailable, isExistingOnServer, mongoKey, data) = new(isRetrieved, isAvailable, isExistingOnServer, mongoKey, data)
 end
 
 type CloudVertex
@@ -142,6 +143,7 @@ function add_vertex!(cg::CloudGraph, vertex::CloudVertex)
     props["bigData"] = json(vertex.bigData);
     vertex.bigData.data = saved;
     vertex.neo4jNode = Neo4j.createnode(cg.neo4j.graph, props);
+    vertex.neo4jNodeId = vertex.neo4jNode.id;
     return vertex.neo4jNode;
   catch e
     rethrow(e);
@@ -150,13 +152,29 @@ function add_vertex!(cg::CloudGraph, vertex::CloudVertex)
 end
 
 # Retrieve a vertex and decompress it into a CloudVertex
-function get_vertex(cg::CloudGraph, neoNodeId::Int, retrieveBigData::Bool)
+function get_vertex(cg::CloudGraph, neoNodeId::Int, packedDataTypeExample, retrieveBigData::Bool)
   try
     neoNode = Neo4j.getnode(cg.neo4j.graph, neoNodeId);
+
     # Get the node properties.
-    props = Neo4j.getnodeproperties(neoNode);
+    props = neoNode.data; #Neo4j.getnodeproperties(neoNode);
+
+    # Unpack the packed data using an interim UInt8[].
+    pData = convert(Array{UInt8}, props["packed"]);
+    pB = PipeBuffer(pData);
+    packed = readproto(pB, packedDataTypeExample);
+
+    # Big data
+    bDS = JSON.parse(props["bigData"]);
+    bigData = BigData(bDS["isRetrieved"], bDS["isAvailable"], bDS["isExistingOnServer"], bDS["mongoKey"], 0);
+    #bigData = BigData(bDS["isRetrieved"], bDS["isAvailable"], bDS["isExistingOnServer"],  0);
+
+    # Now delete these out the props leaving the rest as general properties
+    delete!(props, "packed");
+    delete!(props, "bigData");
+
     # Build a CloudGraph node.
-    return CloudVertex(packed, cgvProperties, bigData, neoNodeId, neoNode, true, -1, false);
+    return CloudVertex(packed, props, bigData, neoNodeId, neoNode, true, -1, false);
   catch e
     rethrow(e);
   end
