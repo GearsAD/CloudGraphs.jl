@@ -6,9 +6,6 @@ using Neo4j;
 using ProtoBuf;
 using JSON;
 
-#Installations
-#Pkg.clone("https://github.com/Lytol/Mongo.jl")
-
 #Types
 export CloudGraphConfiguration, CloudGraph, CloudVertex, BigData
 #Functions
@@ -63,11 +60,20 @@ end
 #   connection::Mongo.MongoClient
 # end
 
+type PackedType
+  packingType::Type
+  encodingFunction::Union{Function, Union}
+  decodingFunction::Union{Function, Union}
+end
+
 # A CloudGraph instance
 type CloudGraph
   configuration::CloudGraphConfiguration
   neo4j::Neo4jInstance
   #mongo::MongoDbInstance
+  packedDataTypes::Dict{AbstractString, PackedType}
+  CloudGraph(configuration, neo4j) = new(configuration, neo4j, Dict{AbstractString, PackedType}())
+  CloudGraph(configuration, neo4j, packedDataTypes) = new(configuration, neo4j, packedDataTypes)
 end
 
 import Base.connect
@@ -77,6 +83,13 @@ function connect(configuration::CloudGraphConfiguration)
   neo4j = Neo4jInstance(neoConn, Neo4j.getgraph(neoConn));
 
   return CloudGraph(configuration, neo4j);
+end
+
+# Register a type with an optional converter.
+function registerPackedType!(cloudGraph::CloudGraph, packedType; encodingConverter::Union{Function, Union}=Union{}, decodingConverter::Union{Function, Union}=Union{})
+  newPackedType = PackedType(packedType, encodingConverter, decodingConverter);
+  cloudGraph.packedDataTypes[string(typeof(packedType))] = newPackedType;
+  nothing;
 end
 
 # --- CloudGraph shutdown ---
@@ -133,7 +146,14 @@ function add_vertex!(cg::CloudGraph, vertex::CloudVertex)
     # Packed information
     pB = PipeBuffer();
     ProtoBuf.writeproto(pB, vertex.packed);
+    typeKey = string(typeof(vertex.packed));
+    if(haskey(cg.packedConverters, typeKey))
+      ProtoBuf.writeproto(pB, vertex.packed);
+    else
+    end
     props["packed"] = pB.data;
+    props["packedType"] = typeKey;
+
     # Big data
     # Write it.
     # write_BigData(cg, vertex);
