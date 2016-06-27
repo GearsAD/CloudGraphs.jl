@@ -11,6 +11,7 @@ export CloudGraphConfiguration, CloudGraph, CloudVertex, BigData
 #Functions
 export open, close, add_vertex!, get_vertex, make_edge, add_edge!
 export cloudVertex2ExVertex, exVertex2CloudVertex
+export registerPackedType!
 
 type BigData
   isRetrieved::Bool
@@ -61,6 +62,7 @@ end
 # end
 
 type PackedType
+  originalType::Type
   packingType::Type
   encodingFunction::Union{Function, Union}
   decodingFunction::Union{Function, Union}
@@ -71,9 +73,10 @@ type CloudGraph
   configuration::CloudGraphConfiguration
   neo4j::Neo4jInstance
   #mongo::MongoDbInstance
-  packedDataTypes::Dict{AbstractString, PackedType}
-  CloudGraph(configuration, neo4j) = new(configuration, neo4j, Dict{AbstractString, PackedType}())
-  CloudGraph(configuration, neo4j, packedDataTypes) = new(configuration, neo4j, packedDataTypes)
+  packedPackedDataTypes::Dict{AbstractString, PackedType}
+  packedOriginalDataTypes::Dict{AbstractString, PackedType}
+  CloudGraph(configuration, neo4j) = new(configuration, neo4j, Dict{AbstractString, PackedType}(), Dict{AbstractString, PackedType}())
+  CloudGraph(configuration, neo4j, packedDataTypes, originalDataTypes) = new(configuration, neo4j, packedDataTypes, originalDataTypes)
 end
 
 import Base.connect
@@ -86,9 +89,10 @@ function connect(configuration::CloudGraphConfiguration)
 end
 
 # Register a type with an optional converter.
-function registerPackedType!(cloudGraph::CloudGraph, packedType; encodingConverter::Union{Function, Union}=Union{}, decodingConverter::Union{Function, Union}=Union{})
-  newPackedType = PackedType(packedType, encodingConverter, decodingConverter);
-  cloudGraph.packedDataTypes[string(typeof(packedType))] = newPackedType;
+function registerPackedType!(cloudGraph::CloudGraph, originalType::DataType, packedType::DataType; encodingConverter::Union{Function, Union}=Union{}, decodingConverter::Union{Function, Union}=Union{})
+  newPackedType = PackedType(originalType, packedType, encodingConverter, decodingConverter);
+  cloudGraph.packedPackedDataTypes[string(packedType)] = newPackedType;
+  cloudGraph.packedOriginalDataTypes[string(originalType)] = newPackedType;
   nothing;
 end
 

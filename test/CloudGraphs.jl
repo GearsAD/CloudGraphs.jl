@@ -6,8 +6,10 @@ using CloudGraphs;
 # For a representative packed structure
 
 # Creating a connection
+print("[TEST] Connecting to the local CloudGraphs instance (Neo4j and Mongo)...");
 configuration = CloudGraphs.CloudGraphConfiguration("localhost", 7474, false, "", "", "localhost", 27017, false, "", "");
 cloudGraph = connect(configuration);
+println("Success!");
 
 # Testing type registration
 type DataTest
@@ -44,15 +46,22 @@ function decoder(d::PackedDataTest)
   M2 = reshape(d.boolvecmat,r2,c2)
   return DataTest(M1,d.string,M2)
 end
+
+print("[TEST] Registering a packed type...");
 # Let's register a packed type.
-CloudGraph.registerPackedType!(cloudGraph, PackedDataTest, encoder, decoder);
+CloudGraphs.registerPackedType!(cloudGraph, DataTest, PackedDataTest, encodingConverter=encoder, decodingConverter=decoder);
+println("Registered types = $(cloudGraph.packedPackedDataTypes)");
+println("Registered types = $(cloudGraph.packedOriginalDataTypes)");
+@test length(cloudGraph.packedPackedDataTypes) > 0
+@test length(cloudGraph.packedOriginalDataTypes) > 0
 # And check that if we encode and decode this type, it's exactly the same.
 # Make a packed data test structure.
 fullType = DataTest(rand(10,10), "This is a test string", trues(10,10));
-typeRegName = string(typeof(fullType));
+typePackedRegName = string(PackedDataTest);
+typeOriginalRegName = string(DataTest);
 # Now lets encode and decode to see.
-testPackedType = cloudGraph.packedDataTypes[typeRegName].encodingFunction(fullType);
-testFullType = cloudGraph.packedDataTypes[typeRegName].decodingFunction(testPackedType);
+testPackedType = cloudGraph.packedOriginalDataTypes[typeOriginalRegName].encodingFunction(fullType);
+testFullType = cloudGraph.packedPackedDataTypes[typePackedRegName].decodingFunction(testPackedType);
 @test json(testFullType) == json(fullType)
 
 # Creating a local test graph.
