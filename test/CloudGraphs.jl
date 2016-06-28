@@ -15,7 +15,7 @@ println("Success!");
 type DataTest
   matrix::Array{Float64, 2}
   string::ASCIIString
-  boolmatrix::BitArray{2}
+  boolmatrix::Array{Int32,2}
   DataTest() = new()
   DataTest(m,s,b) = new(m,s,b)
 end
@@ -23,7 +23,7 @@ type PackedDataTest
   vecmat::Vector{Float64}
   matrows::Int64
   string::ASCIIString
-  boolvecmat::BitArray{1}
+  boolvecmat::Array{Int32,1}
   boolmatrows::Int64
   PackedDataTest() = new()
   PackedDataTest(m,i1,s,b,i2) = new(m[:],i1,s,b[:],i2)
@@ -56,7 +56,7 @@ println("Registered types = $(cloudGraph.packedOriginalDataTypes)");
 @test length(cloudGraph.packedOriginalDataTypes) > 0
 # And check that if we encode and decode this type, it's exactly the same.
 # Make a packed data test structure.
-fullType = DataTest(rand(10,10), "This is a test string", trues(10,10));
+fullType = DataTest(rand(10,10), "This is a test string", rand(Int32,10,10));
 typePackedRegName = string(PackedDataTest);
 typeOriginalRegName = string(DataTest);
 # Now lets encode and decode to see.
