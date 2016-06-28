@@ -151,7 +151,7 @@ function add_vertex!(cg::CloudGraph, vertex::CloudVertex)
     pB = PipeBuffer();
     ProtoBuf.writeproto(pB, vertex.packed);
     typeKey = string(typeof(vertex.packed));
-    if(haskey(cg.packedConverters, typeKey))
+    if(haskey(cg.packedPackedDataTypes, typeKey)) # @GearsAD check, it was cg.convertTypes
       ProtoBuf.writeproto(pB, vertex.packed);
     else
     end

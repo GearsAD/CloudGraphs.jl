@@ -65,20 +65,20 @@ testFullType = cloudGraph.packedPackedDataTypes[typePackedRegName].decodingFunct
 @test json(testFullType) == json(fullType)
 
 # Creating a local test graph.
-# localGraph = graph(ExVertex[], ExEdge{ExVertex}[]);
+localGraph = graph(ExVertex[], ExEdge{ExVertex}[]);
 #Make an ExVertex that may be encoded
-# v = make_vertex(localGraph, "TestVertex");
-# vertex = Graphs.add_vertex!(localGraph, v);
-# vertex.attributes["packed"] = fullType;
-# vertex.attributes["age"] = 64;
-# vertex.attributes["latestEstimate"] = [0.0,0.0,0.0];
-# bigData = CloudGraphs.BigData(true, true, false, rand(10, 10, 10));
-# vertex.attributes["bigData"] = bigData;
+v = make_vertex(localGraph, "TestVertex");
+vertex = Graphs.add_vertex!(localGraph, v);
+vertex.attributes["packed"] = fullType;
+vertex.attributes["age"] = 64;
+vertex.attributes["latestEstimate"] = [0.0,0.0,0.0];
+bigData = CloudGraphs.BigData(true, true, false, rand(10, 10, 10));
+vertex.attributes["bigData"] = bigData;
 
 # Now encoding the structure to CloudGraphs vertex
-# cloudVertex = CloudGraphs.exVertex2CloudVertex(vertex);
+cloudVertex = CloudGraphs.exVertex2CloudVertex(vertex);
 
-# CloudGraphs.add_vertex!(cloudGraph, cloudVertex);
+CloudGraphs.add_vertex!(cloudGraph, cloudVertex);
 
 # Get the node from Neo4j.
 # cloudVertexRet = CloudGraphs.get_vertex(cloudGraph, cloudVertex.neo4jNode.id, packed, false)
