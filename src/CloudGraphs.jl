@@ -25,7 +25,7 @@ end
 
 type CloudVertex
   packed::Any
-  properties::Dict{AbstractString, Any}
+  properties::Dict{UTF8String, Any} #AbstractString
   bigData::BigData
   neo4jNodeId::Int
   neo4jNode::Union{Void,Neo4j.Node}
@@ -112,7 +112,7 @@ function exVertex2CloudVertex(vertex::ExVertex)
   else
     bigData = BigData(false, false, false, Base.Random.uuid4(), 0);
   end
-  if("packed" in propNames) #We have protobuf stuff to save in the node.
+  if haskey(vertex.attributes, "packed") #("packed" in propNames) #We have protobuf stuff to save in the node.
     packed = vertex.attributes["packed"];
   else
     packed = "";
@@ -149,10 +149,17 @@ function add_vertex!(cg::CloudGraph, vertex::CloudVertex)
     props = deepcopy(vertex.properties);
     # Packed information
     pB = PipeBuffer();
-    ProtoBuf.writeproto(pB, vertex.packed);
-    typeKey = string(typeof(vertex.packed));
-    if(haskey(cg.packedPackedDataTypes, typeKey)) # @GearsAD check, it was cg.convertTypes
-      ProtoBuf.writeproto(pB, vertex.packed);
+    # ProtoBuf.writeproto(pB, vertex.packed);
+    typeKey="NoType"
+    # @show string(typeof(vertex.packed))
+    # @show keys(cg.packedOriginalDataTypes)
+    if(haskey(cg.packedOriginalDataTypes, string(typeof(vertex.packed)) ) ) # @GearsAD check, it was cg.convertTypes
+
+      typeOriginalRegName = string(typeof(vertex.packed));
+      packedType = cg.packedOriginalDataTypes[typeOriginalRegName].encodingFunction(vertex.packed);
+
+      ProtoBuf.writeproto(pB, packedType); # vertex.packed
+      typeKey = string(typeof(packedType));
     else
     end
     props["packed"] = pB.data;
@@ -166,6 +173,10 @@ function add_vertex!(cg::CloudGraph, vertex::CloudVertex)
     vertex.bigData.data = Vector{UInt8}();
     props["bigData"] = json(vertex.bigData);
     vertex.bigData.data = saved;
+
+    # @show props["packedType"]
+    # @show size(props["packed"])
+
     vertex.neo4jNode = Neo4j.createnode(cg.neo4j.graph, props);
     vertex.neo4jNodeId = vertex.neo4jNode.id;
     return vertex.neo4jNode;
@@ -176,7 +187,7 @@ function add_vertex!(cg::CloudGraph, vertex::CloudVertex)
 end
 
 # Retrieve a vertex and decompress it into a CloudVertex
-function get_vertex(cg::CloudGraph, neoNodeId::Int, packedDataTypeExample, retrieveBigData::Bool)
+function get_vertex(cg::CloudGraph, neoNodeId::Int, retrieveBigData::Bool)
   try
     neoNode = Neo4j.getnode(cg.neo4j.graph, neoNodeId);
 
@@ -186,7 +197,12 @@ function get_vertex(cg::CloudGraph, neoNodeId::Int, packedDataTypeExample, retri
     # Unpack the packed data using an interim UInt8[].
     pData = convert(Array{UInt8}, props["packed"]);
     pB = PipeBuffer(pData);
-    packed = readproto(pB, packedDataTypeExample);
+    @show props["packedType"]
+
+    typePackedRegName = props["packedType"];
+
+    packed = readproto(pB, cg.packedPackedDataTypes[typePackedRegName].packingType() );
+    recvOrigType = cg.packedPackedDataTypes[typePackedRegName].decodingFunction(packed);
 
     # Big data
     bDS = JSON.parse(props["bigData"]);
@@ -198,7 +214,8 @@ function get_vertex(cg::CloudGraph, neoNodeId::Int, packedDataTypeExample, retri
     delete!(props, "bigData");
 
     # Build a CloudGraph node.
-    return CloudVertex(packed, props, bigData, neoNodeId, neoNode, true, -1, false);
+    # TODO -- GearsAD please check that we want recvOrigType vs packed as first argument
+    return CloudVertex(recvOrigType, props, bigData, neoNodeId, neoNode, true, -1, false);
   catch e
     rethrow(e);
   end
