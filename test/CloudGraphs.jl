@@ -81,10 +81,24 @@ cloudVertex = CloudGraphs.exVertex2CloudVertex(vertex);
 CloudGraphs.add_vertex!(cloudGraph, cloudVertex);
 
 # Get the node from Neo4j.
-# cloudVertexRet = CloudGraphs.get_vertex(cloudGraph, cloudVertex.neo4jNode.id, packed, false)
+cloudVertexRet = CloudGraphs.get_vertex(cloudGraph, cloudVertex.neo4jNode.id, false) # fullType not required
+
+
 # Check that all the important bits match using string comparisons of the JSON form of the structures
-# @test json(cloudVertex.packed) == json(cloudVertexRet.packed)
+@test json(cloudVertex.packed) == json(cloudVertexRet.packed)
 #@test json(cloudVertex.bigData) == json(cloudVertexRet.bigData)
 # @test json(cloudVertex.properties) == json(cloudVertexRet.properties)
 # @test cloudVertex.neo4jNodeId == cloudVertexRet.neo4jNodeId
 # @test json(cloudVertex.neo4jNode) == json(cloudVertexRet.neo4jNode)
+
+
+
+
+
+
+
+
+
+
+
+#
