@@ -110,7 +110,25 @@ cloudVertexRet = CloudGraphs.get_vertex(cloudGraph, cloudVertex.neo4jNode.id, fa
 @test json(cloudVertex.properties) == json(cloudVertexRet.properties);
 println("Success!")
 
-#print("[TEST] Deleting a CloudGraph vertex...")
+print("[TEST] Deleting a CloudGraph vertex...")
+CloudGraphs.delete_vertex!(cloudGraph, cloudVertex);
+println("Success!")
+
+print("[TEST] Negative testing for double deletions...")
+# Testing a double-delete
+try
+  CloudGraphs.delete_vertex!(cloudGraph, cloudVertex);
+  @test false
+catch
+  print("Success!")
+end
+# Testing the deletion of an apparently existing node
+try
+  CloudGraphs.delete_vertex!(cloudGraph, cloudVertexRet);
+  @test false
+catch
+  print("Success!")
+end
 
 #print("[TEST] Making an edge...")
 #@test false

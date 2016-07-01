@@ -34,7 +34,7 @@ type CloudVertex
   isValidNeoNodeId::Bool
   exVertexId::Int
   isValidExVertex::Bool
-  CloudVertex() = new(Union, Dict{UTF8String, Any}(), BigData(), -1, Void, false, -1, false)
+  CloudVertex() = new(Union, Dict{UTF8String, Any}(), BigData(), -1, nothing, false, -1, false)
   CloudVertex(packed, properties, bigData, neo4jNodeId, neo4jNode, isValidNeoNodeId, exVertexId, isValidExVertex) = new(packed, properties, bigData, neo4jNodeId, neo4jNode, isValidNeoNodeId, exVertexId, isValidExVertex)
 end
 
@@ -240,7 +240,7 @@ end
 
 function update_vertex!(cg::CloudGraph, vertex::CloudVertex)
   try
-    if(vertex.neo4jNode == Void)
+    if(vertex.neo4jNode == nothing)
       error("There isn't a Neo4j Node associated with this CloudVertex. You might want to call add_vertex instead of update_vertex.");
     end
 
@@ -252,16 +252,19 @@ function update_vertex!(cg::CloudGraph, vertex::CloudVertex)
 end
 
 function delete_vertex!(cg::CloudGraph, vertex::CloudVertex)
-  if(vertex.neo4jNode == Void)
+  if(vertex.neo4jNode == nothing)
     error("There isn't a Neo4j Node associated with this CloudVertex.");
   end
 
+  warn("Still need to add the Mongo deletion to the call here...");
+
   Neo4j.deletenode(vertex.neo4jNode);
 
-  vertex.neo4jNode = Void;
+  vertex.neo4jNode = nothing;
+  vertex.neo4jNodeId = -1;
 end
 
-function add_edge!(cg::CloudGraph, edge::ExEdge)
+function add_edge!(cg::CloudGraph, edge::CloudEdge)
 
 end
 
