@@ -47,7 +47,7 @@ function decoder(d::PackedDataTest)
   return DataTest(M1,d.string,M2)
 end
 
-print("[TEST] Registering a packed type...");
+println("[TEST] Registering a packed type and testing the Protobuf encoding/decoding...");
 # Let's register a packed type.
 CloudGraphs.registerPackedType!(cloudGraph, DataTest, PackedDataTest, encodingConverter=encoder, decodingConverter=decoder);
 println("Registered types = $(cloudGraph.packedPackedDataTypes)");
@@ -60,11 +60,15 @@ fullType = DataTest(rand(10,10), "This is a test string", rand(Int32,10,10));
 typePackedRegName = string(PackedDataTest);
 typeOriginalRegName = string(DataTest);
 # Now lets encode and decode to see.
+println("Encoding...")
 testPackedType = cloudGraph.packedOriginalDataTypes[typeOriginalRegName].encodingFunction(fullType);
+println("Decoding...")
 testFullType = cloudGraph.packedPackedDataTypes[typePackedRegName].decodingFunction(testPackedType);
 @test json(testFullType) == json(fullType)
+println("Success!")
 
 # Creating a local test graph.
+print("[TEST] Creating a CloudVertex from an ExVertex...")
 localGraph = graph(ExVertex[], ExEdge{ExVertex}[]);
 #Make an ExVertex that may be encoded
 v = make_vertex(localGraph, "TestVertex");
@@ -74,31 +78,45 @@ vertex.attributes["age"] = 64;
 vertex.attributes["latestEstimate"] = [0.0,0.0,0.0];
 bigData = CloudGraphs.BigData(true, true, false, rand(10, 10, 10));
 vertex.attributes["bigData"] = bigData;
-
 # Now encoding the structure to CloudGraphs vertex
 cloudVertex = CloudGraphs.exVertex2CloudVertex(vertex);
+println("Success!");
 
+print("[TEST] Adding a vertex...")
 CloudGraphs.add_vertex!(cloudGraph, cloudVertex);
+println("Success!")
 
 # Get the node from Neo4j.
+print("[TEST] Retrieving a node from CloudGraph...")
 cloudVertexRet = CloudGraphs.get_vertex(cloudGraph, cloudVertex.neo4jNode.id, false) # fullType not required
-
-
 # Check that all the important bits match using string comparisons of the JSON form of the structures
 @test json(cloudVertex.packed) == json(cloudVertexRet.packed)
 #@test json(cloudVertex.bigData) == json(cloudVertexRet.bigData)
-# @test json(cloudVertex.properties) == json(cloudVertexRet.properties)
-# @test cloudVertex.neo4jNodeId == cloudVertexRet.neo4jNodeId
-# @test json(cloudVertex.neo4jNode) == json(cloudVertexRet.neo4jNode)
+@show "Expected = ", json(cloudVertex.properties)
+@show "Received = ", json(cloudVertexRet.properties)
+@test json(cloudVertex.properties) == json(cloudVertexRet.properties)
+@test cloudVertex.neo4jNodeId == cloudVertexRet.neo4jNodeId
+@test cloudVertexRet.neo4jNode != Void
+println("Success!")
 
+print("[TEST] Testing the update method...")
+cloudVertex.properties["age"] = 100;
+cloudVertex.properties["latestEstimate"] = [5.0, 5.0, 5.0];
+CloudGraphs.update_vertex!(cloudGraph, cloudVertex);
+# Let's retrieve it and see if it is updated.
+cloudVertexRet = CloudGraphs.get_vertex(cloudGraph, cloudVertex.neo4jNode.id, false) # fullType not required
+# And check that it matches
+@show json(cloudVertexRet.properties);
+@test json(cloudVertex.properties) == json(cloudVertexRet.properties);
+println("Success!")
 
+#print("[TEST] Deleting a CloudGraph vertex...")
 
+#print("[TEST] Making an edge...")
+#@test false
 
+#print("[TEST] Adding it to the graphs...")
+#@test false
 
-
-
-
-
-
-
-#
+#print("[Test] Retrieving the edge from the database...")
+#@test false
