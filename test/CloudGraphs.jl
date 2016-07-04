@@ -144,10 +144,10 @@ CloudGraphs.add_vertex!(cloudGraph, cloudVert2);
 props = Dict{UTF8String, Any}(utf8("Test") => 8);
 edge = CloudGraphs.CloudEdge(cloudVert1, cloudVert2, "DEPENDENCE");
 print("[TEST] Adding it to the graphs...")
-CloudGraphs.add_edge!(cloudGraph, edge);
+retedget = CloudGraphs.add_edge!(cloudGraph, edge);
 println("Success!")
 #@test false
-@show edge.neo4jEdgeId
+@show edge.neo4jEdgeId = retedget.id
 
 print("[TEST] Get edge from graph")
 gotedge = CloudGraphs.get_edge(cloudGraph, edge.neo4jEdgeId)
