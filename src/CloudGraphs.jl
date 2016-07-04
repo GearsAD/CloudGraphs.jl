@@ -10,7 +10,7 @@ using JSON;
 export CloudGraphConfiguration, CloudGraph, CloudVertex, BigData
 #Functions
 export connect, disconnect, add_vertex!, get_vertex, update_vertex!, delete_vertex!
-export add_edge!, update_edge!, delete_edge!
+export add_edge!, update_edge!, delete_edge!, get_edge
 export cloudVertex2ExVertex, exVertex2CloudVertex
 export registerPackedType!
 
@@ -269,6 +269,7 @@ function delete_vertex!(cg::CloudGraph, vertex::CloudVertex)
   vertex.neo4jNodeId = -1;
 end
 
+
 function add_edge!(cg::CloudGraph, edge::CloudEdge)
   if(edge.neo4jSourceVertex == nothing)
     error("There isn't a valid source Neo4j in this CloudEdge.");
@@ -280,15 +281,29 @@ function add_edge!(cg::CloudGraph, edge::CloudEdge)
   Neo4j.createrel(edge.neo4jSourceVertex, edge.neo4jDestVertex, edge.edgeType; props=edge.properties );
 end
 
+function get_edge(cg::CloudGraph, neoEdgeId::Int)
+  try
+    neoEdge = Neo4j.getrel(cg.neo4j.graph, neoEdgeId);
+
+    # Get the node properties.
+    # props = neoNode.data; #Neo4j.getnodeproperties(neoNode);
+
+    # Build a CloudGraph node.
+    # TODO -- GearsAD please check that we want recvOrigType vs packed as first argument
+    return neoEdge #CloudEdge(recvOrigType, props, bigData, neoNodeId, neoNode, true, -1, false);
+  catch e
+    rethrow(e);
+  end
+end
+
 function update_edge!()
 end
 
 function delete_edge!()
 end
 
-function out_neighbors(cg::CloudGraphs, vert::CloudVertex)
-
-
-end
+# function out_neighbors(cg::CloudGraphs, vert::CloudVertex)
+#   nothing
+# end
 
 end #module

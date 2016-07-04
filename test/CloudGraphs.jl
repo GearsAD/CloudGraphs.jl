@@ -147,9 +147,14 @@ print("[TEST] Adding it to the graphs...")
 CloudGraphs.add_edge!(cloudGraph, edge);
 println("Success!")
 #@test false
+@show edge.neo4jEdgeId
 
-print("[TEST] Finding out_neighbors of a vertex")
-CloudGraphs.out_neighbors(cloudGraph, cloudVert1)
+print("[TEST] Get edge from graph")
+gotedge = CloudGraphs.get_edge(cloudGraph, edge.neo4jEdgeId)
+
+
+# print("[TEST] Finding out_neighbors of a vertex")
+# CloudGraphs.out_neighbors(cloudGraph, cloudVert1)
 # @test false
 
 #print("[Test] Retrieving the edge from the database...")
