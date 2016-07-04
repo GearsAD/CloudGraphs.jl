@@ -278,19 +278,24 @@ function add_edge!(cg::CloudGraph, edge::CloudEdge)
     error("There isn't a valid destination Neo4j in this CloudEdge.");
   end
 
-  Neo4j.createrel(edge.neo4jSourceVertex, edge.neo4jDestVertex, edge.edgeType; props=edge.properties );
+  retrel = Neo4j.createrel(edge.neo4jSourceVertex, edge.neo4jDestVertex, edge.edgeType; props=edge.properties );
+  edge.neo4jEdgeId = retrel.id
+  retrel
 end
 
 function get_edge(cg::CloudGraph, neoEdgeId::Int)
   try
     neoEdge = Neo4j.getrel(cg.neo4j.graph, neoEdgeId);
-
+    startid = parse(Int,split(neoEdge.relstart,'/')[end])
+    endid = parse(Int,split(neoEdge.relend,'/')[end])
+    cloudVert1 = CloudGraphs.get_vertex(cg, startid, false)
+    cloudVert2 = CloudGraphs.get_vertex(cg, endid, false)
     # Get the node properties.
-    # props = neoNode.data; #Neo4j.getnodeproperties(neoNode);
+    # props = neoEdge.data; # TODO
+    edge = CloudGraphs.CloudEdge(cloudVert1, cloudVert2, "DEPENDENCE");
+    edge.neo4jEdgeId = neoEdge.id
 
-    # Build a CloudGraph node.
-    # TODO -- GearsAD please check that we want recvOrigType vs packed as first argument
-    return neoEdge #CloudEdge(recvOrigType, props, bigData, neoNodeId, neoNode, true, -1, false);
+    return edge #CloudEdge(recvOrigType, props, bigData, neoNodeId, neoNode, true, -1, false);
   catch e
     rethrow(e);
   end

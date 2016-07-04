@@ -147,11 +147,30 @@ print("[TEST] Adding it to the graphs...")
 retedget = CloudGraphs.add_edge!(cloudGraph, edge);
 println("Success!")
 #@test false
-@show edge.neo4jEdgeId = retedget.id
 
 print("[TEST] Get edge from graph")
 gotedge = CloudGraphs.get_edge(cloudGraph, edge.neo4jEdgeId)
+@test typeof(gotedge) == CloudGraphs.CloudEdge
+@test edge.neo4jEdgeId == gotedge.neo4jEdgeId
+@test edge.edgeType == gotedge.edgeType
+@test edge.neo4jSourceVertexId == gotedge.neo4jSourceVertexId
+@test edge.neo4jDestVertexId == gotedge.neo4jDestVertexId
+@test edge.neo4jEdge == gotedge.neo4jEdge
+@test edge.properties == gotedge.properties
 
+#failing here
+@test edge.neo4jSourceVertex == gotedge.neo4jSourceVertex
+@test edge.neo4jDestVertex == gotedge.neo4jDestVertex
+
+# @test json(edge) == json(gotedge)
+println("Success!")
+# @show typeof(edge),fieldnames(edge)
+# @show typeof(gotedge),fieldnames(gotedge)
+# @show cloudVert1.neo4jNode.create_relationship
+# [:relstart,:property,:self,:properties,:reltype,:relend,:data,:id,:graph]
+
+
+# @test json(edge) == json(gotedge)
 
 # print("[TEST] Finding out_neighbors of a vertex")
 # CloudGraphs.out_neighbors(cloudGraph, cloudVert1)
