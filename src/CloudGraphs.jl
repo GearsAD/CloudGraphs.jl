@@ -7,7 +7,7 @@ using ProtoBuf;
 using JSON;
 
 #Types
-export CloudGraphConfiguration, CloudGraph, CloudVertex, BigData
+export CloudGraphConfiguration, CloudGraph, CloudVertex, CloudEdge, BigData
 #Functions
 export connect, disconnect, add_vertex!, get_vertex, update_vertex!, delete_vertex!
 export add_edge!, update_edge!, delete_edge!, get_edge
@@ -198,8 +198,11 @@ end
 
 function add_vertex!(cg::CloudGraph, vertex::CloudVertex)
   try
-    vertex.neo4jNode = Neo4j.createnode(cg.neo4j.graph, cloudVertex2NeoProps(cg, vertex));
+    props = cloudVertex2NeoProps(cg, vertex)
+    vertex.neo4jNode = Neo4j.createnode(cg.neo4j.graph, props);
     vertex.neo4jNodeId = vertex.neo4jNode.id;
+    # make sure original struct gets the new bits of data it should have -- rather show than hide?
+    # for ky in ["packed"; "packedType"]  vertex.properties[ky] = props[ky] end
     return vertex.neo4jNode;
   catch e
     rethrow(e);
@@ -218,7 +221,7 @@ function get_vertex(cg::CloudGraph, neoNodeId::Int, retrieveBigData::Bool)
     # Unpack the packed data using an interim UInt8[].
     pData = convert(Array{UInt8}, props["packed"]);
     pB = PipeBuffer(pData);
-    @show props["packedType"]
+    # @show props["packedType"]
 
     typePackedRegName = props["packedType"];
 

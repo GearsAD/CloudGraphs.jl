@@ -158,6 +158,31 @@ gotedge = CloudGraphs.get_edge(cloudGraph, edge.neo4jEdgeId)
 @test edge.neo4jEdge == gotedge.neo4jEdge
 @test edge.properties == gotedge.properties
 
+function testCloudGraphsNodeCompares(a::Neo4j.Node, b::Neo4j.Node)
+  @test a.paged_traverse == b.paged_traverse
+  @test a.labels == b.labels
+  @test a.outgoing_relationships == b.outgoing_relationships
+  @test a.traverse == b.traverse
+  @test a.all_typed_relationships == b.all_typed_relationships
+  @test a.all_relationships == b.all_relationships
+  @test a.property == b.property
+  @test a.self == b.self
+  @test a.outgoing_typed_relationships == b.outgoing_typed_relationships
+  @test a.properties == b.properties
+  @test a.incoming_relationships == b.incoming_relationships
+  @test a.incoming_typed_relationships == b.incoming_typed_relationships
+  @test a.id == b.id
+  # ignore packed data
+  # @test a.data == b.data
+  nothing
+end
+
+testCloudGraphsNodeCompares(edge.neo4jSourceVertex, gotedge.neo4jSourceVertex)
+testCloudGraphsNodeCompares(edge.neo4jDestVertex, gotedge.neo4jDestVertex)
+
+  # edge.neo4jSourceVertex.data
+  # gotedge.neo4jSourceVertex.data
+
 #failing here
 @test edge.neo4jSourceVertex == gotedge.neo4jSourceVertex
 @test edge.neo4jDestVertex == gotedge.neo4jDestVertex
