@@ -84,12 +84,18 @@ type CloudEdge
   neo4jEdge::Union{Void,Neo4j.Relationship}
   edgeType::UTF8String
   neo4jSourceVertexId::Int
-  neo4jSourceVertex::Union{Void,Neo4j.Node}
+  SourceVertex::Union{Void,CloudGraphs.CloudVertex}  #neo4jSourceVertex::Union{Void,Neo4j.Node}
   neo4jDestVertexId::Int
-  neo4jDestVertex::Union{Void,Neo4j.Node}
+  DestVertex::Union{Void,CloudGraphs.CloudVertex}  #neo4jDestVertex::Union{Void,Neo4j.Node}
   properties::Dict{UTF8String, Any} #AbstractString
   CloudEdge() = new(-1, nothing, "", -1, nothing, -1, nothing, Dict{UTF8String, Any}())
-  CloudEdge(vertexSrc::CloudVertex, vertexDest::CloudVertex, edgeType::AbstractString; props::Dict{UTF8String, Any}=Dict{UTF8String, Any}()) = new(-1, nothing, utf8(edgeType), vertexSrc.neo4jNodeId, vertexSrc.neo4jNode,  vertexDest.neo4jNodeId, vertexDest.neo4jNode, props)
+  CloudEdge(vertexSrc::CloudVertex, vertexDest::CloudVertex, edgeType::AbstractString; props::Dict{UTF8String, Any}=Dict{UTF8String, Any}()) = new(
+    -1, nothing, utf8(edgeType),
+    vertexSrc.neo4jNodeId,
+    vertexSrc, #.neo4jNode,
+    vertexDest.neo4jNodeId,
+    vertexDest, #.neo4jNode,
+    props)
 end
 
 import Base.connect
@@ -274,14 +280,14 @@ end
 
 
 function add_edge!(cg::CloudGraph, edge::CloudEdge)
-  if(edge.neo4jSourceVertex == nothing)
+  if(edge.SourceVertex.neo4jNode == nothing)
     error("There isn't a valid source Neo4j in this CloudEdge.");
   end
-  if(edge.neo4jDestVertex == nothing)
+  if(edge.DestVertex.neo4jNode == nothing)
     error("There isn't a valid destination Neo4j in this CloudEdge.");
   end
 
-  retrel = Neo4j.createrel(edge.neo4jSourceVertex, edge.neo4jDestVertex, edge.edgeType; props=edge.properties );
+  retrel = Neo4j.createrel(edge.SourceVertex.neo4jNode, edge.DestVertex.neo4jNode, edge.edgeType; props=edge.properties );
   edge.neo4jEdgeId = retrel.id
   retrel
 end

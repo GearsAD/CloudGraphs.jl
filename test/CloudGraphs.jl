@@ -104,7 +104,7 @@ cloudVertex.properties["age"] = 100;
 cloudVertex.properties["latestEstimate"] = [5.0, 5.0, 5.0];
 CloudGraphs.update_vertex!(cloudGraph, cloudVertex);
 # Let's retrieve it and see if it is updated.
-cloudVertexRet = CloudGraphs.get_vertex(cloudGraph, cloudVertex.neo4jNode.id, false) # fullType not required
+cloudVertexRet = CloudGraphs.get_vertex(cloudGraph, cloudVertex.neo4jNode.id, false)
 # And check that it matches
 @show json(cloudVertexRet.properties);
 @test json(cloudVertex.properties) == json(cloudVertexRet.properties);
@@ -177,15 +177,25 @@ function testCloudGraphsNodeCompares(a::Neo4j.Node, b::Neo4j.Node)
   nothing
 end
 
-testCloudGraphsNodeCompares(edge.neo4jSourceVertex, gotedge.neo4jSourceVertex)
-testCloudGraphsNodeCompares(edge.neo4jDestVertex, gotedge.neo4jDestVertex)
+testCloudGraphsNodeCompares(edge.DestVertex.neo4jNode, gotedge.DestVertex.neo4jNode)
+testCloudGraphsNodeCompares(edge.SourceVertex.neo4jNode, gotedge.SourceVertex.neo4jNode)
 
   # edge.neo4jSourceVertex.data
   # gotedge.neo4jSourceVertex.data
 
+
+@test   json(edge.SourceVertex.packed) == json(gotedge.SourceVertex.packed)
+@test   edge.SourceVertex.properties == gotedge.SourceVertex.properties
+  #@test  edge.SourceVertex.bigData == gotedge.SourceVertex.bigData
+@test   edge.SourceVertex.neo4jNodeId == gotedge.SourceVertex.neo4jNodeId
+# @test   edge.SourceVertex.neo4jNode == gotedge.SourceVertex.neo4jNode
+@test   edge.SourceVertex.isValidNeoNodeId == gotedge.SourceVertex.isValidNeoNodeId
+# @test   edge.SourceVertex.exVertexId == gotedge.SourceVertex.exVertexId
+@test   edge.SourceVertex.isValidExVertex == gotedge.SourceVertex.isValidExVertex
+
 #failing here
-@test edge.neo4jSourceVertex == gotedge.neo4jSourceVertex
-@test edge.neo4jDestVertex == gotedge.neo4jDestVertex
+# @test edge.SourceVertex == gotedge.SourceVertex
+# @test edge.DestVertex == gotedge.DestVertex
 
 # @test json(edge) == json(gotedge)
 println("Success!")
