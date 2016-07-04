@@ -286,4 +286,9 @@ end
 function delete_edge!()
 end
 
+function out_neighbors(cg::CloudGraphs, vert::CloudVertex)
+
+
+end
+
 end #module
