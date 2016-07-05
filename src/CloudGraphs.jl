@@ -288,8 +288,25 @@ function add_edge!(cg::CloudGraph, edge::CloudEdge)
     error("There isn't a valid destination Neo4j in this CloudEdge.");
   end
 
+
   retrel = Neo4j.createrel(edge.SourceVertex.neo4jNode, edge.DestVertex.neo4jNode, edge.edgeType; props=edge.properties );
   edge.neo4jEdgeId = retrel.id
+
+  # add destid to sourcevert and visa versa
+  if haskey(edge.SourceVertex.properties, "neighborVertexIDs")
+    push!(edge.SourceVertex.properties["neighborVertexIDs"], edge.DestVertex.neo4jNodeId)
+  else
+    edge.SourceVertex.properties["neighborVertexIDs"] = Array{Int32,1}([edge.DestVertex.neo4jNodeId])
+  end
+  if haskey(edge.DestVertex.properties, "neighborVertexIDs")
+    push!(edge.DestVertex.properties["neighborVertexIDs"], edge.SourceVertex.neo4jNodeId)
+  else
+    edge.DestVertex.properties["neighborVertexIDs"] = Array{Int32,1}([edge.SourceVertex.neo4jNodeId])
+  end
+
+  update_vertex!(cg, edge.SourceVertex)
+  update_vertex!(cg, edge.DestVertex)
+
   retrel
 end
 
