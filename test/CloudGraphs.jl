@@ -73,7 +73,7 @@ localGraph = graph(ExVertex[], ExEdge{ExVertex}[]);
 #Make an ExVertex that may be encoded
 v = make_vertex(localGraph, "TestVertex");
 vertex = Graphs.add_vertex!(localGraph, v);
-vertex.attributes["packed"] = fullType;
+vertex.attributes["data"] = fullType;
 vertex.attributes["age"] = 64;
 vertex.attributes["latestEstimate"] = [0.0,0.0,0.0];
 bigData = CloudGraphs.BigData(true, true, false, rand(10, 10, 10));

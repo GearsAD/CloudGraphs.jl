@@ -130,16 +130,16 @@ function exVertex2CloudVertex(vertex::ExVertex)
   if("bigData" in propNames) #We have big data to save.
     bigData = vertex.attributes["bigData"];
   else
-    bigData = BigData(false, false, false, Base.Random.uuid4(), 0);
+    bigData = BigData(false, false, false, string(Base.Random.uuid4()), 0);
   end
-  if haskey(vertex.attributes, "packed") #("packed" in propNames) #We have protobuf stuff to save in the node.
-    packed = vertex.attributes["packed"];
+  if haskey(vertex.attributes, "data") #("data" in propNames) #We have protobuf stuff to save in the node.
+    packed = vertex.attributes["data"];
   else
     packed = "";
   end
   #2. Transfer everything else to properties
   for (k,v) in vertex.attributes
-    if(k != "bigData" && k != "packed")
+    if(k != "bigData" && k != "data")
       cgvProperties[k] = v;
     end
   end
@@ -184,7 +184,7 @@ function cloudVertex2NeoProps(cg::CloudGraph, vertex::CloudVertex)
     typeKey = string(typeof(packedType));
   else
   end
-  props["packed"] = pB.data;
+  props["data"] = pB.data;
   props["packedType"] = typeKey;
 
   # Big data
@@ -197,7 +197,7 @@ function cloudVertex2NeoProps(cg::CloudGraph, vertex::CloudVertex)
   vertex.bigData.data = saved;
 
   # @show props["packedType"]
-  # @show size(props["packed"])
+  # @show size(props["data"])
   return props;
 end
 
@@ -217,7 +217,7 @@ function add_vertex!(cg::CloudGraph, vertex::CloudVertex)
     vertex.neo4jNodeId = vertex.neo4jNode.id;
     vertex.isValidNeoNodeId = true
     # make sure original struct gets the new bits of data it should have -- rather show than hide?
-    # for ky in ["packed"; "packedType"]  vertex.properties[ky] = props[ky] end
+    # for ky in ["data"; "packedType"]  vertex.properties[ky] = props[ky] end
     return vertex.neo4jNode;
   catch e
     rethrow(e);
@@ -234,7 +234,7 @@ function get_vertex(cg::CloudGraph, neoNodeId::Int, retrieveBigData::Bool)
     props = neoNode.data; #Neo4j.getnodeproperties(neoNode);
 
     # Unpack the packed data using an interim UInt8[].
-    pData = convert(Array{UInt8}, props["packed"]);
+    pData = convert(Array{UInt8}, props["data"]);
     pB = PipeBuffer(pData);
     # @show props["packedType"]
 
@@ -249,7 +249,7 @@ function get_vertex(cg::CloudGraph, neoNodeId::Int, retrieveBigData::Bool)
     #bigData = BigData(bDS["isRetrieved"], bDS["isAvailable"], bDS["isExistingOnServer"],  0);
 
     # Now delete these out the props leaving the rest as general properties
-    delete!(props, "packed");
+    delete!(props, "data");
     delete!(props, "packedType");
     delete!(props, "bigData");
 
