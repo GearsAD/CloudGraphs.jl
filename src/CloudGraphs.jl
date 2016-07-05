@@ -148,6 +148,9 @@ function exVertex2CloudVertex(vertex::ExVertex)
 end
 
 function cloudVertex2ExVertex(vertex::CloudVertex)
+  # populate the data container
+
+  # create an ExVertex
 
 end
 
@@ -296,11 +299,13 @@ function add_edge!(cg::CloudGraph, edge::CloudEdge)
   # add destid to sourcevert and visa versa
   if haskey(edge.SourceVertex.properties, "neighborVertexIDs")
     push!(edge.SourceVertex.properties["neighborVertexIDs"], edge.DestVertex.neo4jNodeId)
+    edge.SourceVertex.properties["neighborVertexIDs"] = union(edge.SourceVertex.properties["neighborVertexIDs"], [edge.DestVertex.neo4jNodeId])
   else
     edge.SourceVertex.properties["neighborVertexIDs"] = Array{Int64,1}([edge.DestVertex.neo4jNodeId])
   end
   if haskey(edge.DestVertex.properties, "neighborVertexIDs")
     push!(edge.DestVertex.properties["neighborVertexIDs"], edge.SourceVertex.neo4jNodeId)
+    edge.DestVertex.properties["neighborVertexIDs"] = union(edge.DestVertex.properties["neighborVertexIDs"], [edge.SourceVertex.neo4jNodeId])
   else
     edge.DestVertex.properties["neighborVertexIDs"] = Array{Int64,1}([edge.SourceVertex.neo4jNodeId])
   end
