@@ -104,7 +104,7 @@ cloudVertex.properties["age"] = 100;
 cloudVertex.properties["latestEstimate"] = [5.0, 5.0, 5.0];
 CloudGraphs.update_vertex!(cloudGraph, cloudVertex);
 # Let's retrieve it and see if it is updated.
-cloudVertexRet = CloudGraphs.get_vertex(cloudGraph, cloudVertex.neo4jNode.id, false) # fullType not required
+cloudVertexRet = CloudGraphs.get_vertex(cloudGraph, cloudVertex.neo4jNode.id, false)
 # And check that it matches
 @show json(cloudVertexRet.properties);
 @test json(cloudVertex.properties) == json(cloudVertexRet.properties);
@@ -142,12 +142,74 @@ CloudGraphs.add_vertex!(cloudGraph, cloudVert2);
 # Create an edge
 # Test props
 props = Dict{UTF8String, Any}(utf8("Test") => 8);
-edge = CloudGraphs.CloudEdge(cloudVert1, cloudVert2, "TestNode");
-CloudGraphs.add_edge!(cloudGraph, edge);
+edge = CloudGraphs.CloudEdge(cloudVert1, cloudVert2, "DEPENDENCE");
+print("[TEST] Adding it to the graphs...")
+retedget = CloudGraphs.add_edge!(cloudGraph, edge);
+println("Success!")
 #@test false
 
-#print("[TEST] Adding it to the graphs...")
-#@test false
+print("[TEST] Get edge from graph")
+gotedge = CloudGraphs.get_edge(cloudGraph, edge.neo4jEdgeId)
+@test typeof(gotedge) == CloudGraphs.CloudEdge
+@test edge.neo4jEdgeId == gotedge.neo4jEdgeId
+@test edge.edgeType == gotedge.edgeType
+@test edge.neo4jSourceVertexId == gotedge.neo4jSourceVertexId
+@test edge.neo4jDestVertexId == gotedge.neo4jDestVertexId
+@test edge.neo4jEdge == gotedge.neo4jEdge
+@test edge.properties == gotedge.properties
+
+function testCloudGraphsNodeCompares(a::Neo4j.Node, b::Neo4j.Node)
+  @test a.paged_traverse == b.paged_traverse
+  @test a.labels == b.labels
+  @test a.outgoing_relationships == b.outgoing_relationships
+  @test a.traverse == b.traverse
+  @test a.all_typed_relationships == b.all_typed_relationships
+  @test a.all_relationships == b.all_relationships
+  @test a.property == b.property
+  @test a.self == b.self
+  @test a.outgoing_typed_relationships == b.outgoing_typed_relationships
+  @test a.properties == b.properties
+  @test a.incoming_relationships == b.incoming_relationships
+  @test a.incoming_typed_relationships == b.incoming_typed_relationships
+  @test a.id == b.id
+  # ignore packed data
+  # @test a.data == b.data
+  nothing
+end
+
+testCloudGraphsNodeCompares(edge.DestVertex.neo4jNode, gotedge.DestVertex.neo4jNode)
+testCloudGraphsNodeCompares(edge.SourceVertex.neo4jNode, gotedge.SourceVertex.neo4jNode)
+
+  # edge.neo4jSourceVertex.data
+  # gotedge.neo4jSourceVertex.data
+
+
+@test   json(edge.SourceVertex.packed) == json(gotedge.SourceVertex.packed)
+@test   edge.SourceVertex.properties == gotedge.SourceVertex.properties
+  #@test  edge.SourceVertex.bigData == gotedge.SourceVertex.bigData
+@test   edge.SourceVertex.neo4jNodeId == gotedge.SourceVertex.neo4jNodeId
+# @test   edge.SourceVertex.neo4jNode == gotedge.SourceVertex.neo4jNode
+@test   edge.SourceVertex.isValidNeoNodeId == gotedge.SourceVertex.isValidNeoNodeId
+# @test   edge.SourceVertex.exVertexId == gotedge.SourceVertex.exVertexId
+@test   edge.SourceVertex.isValidExVertex == gotedge.SourceVertex.isValidExVertex
+
+#failing here
+# @test edge.SourceVertex == gotedge.SourceVertex
+# @test edge.DestVertex == gotedge.DestVertex
+
+# @test json(edge) == json(gotedge)
+println("Success!")
+# @show typeof(edge),fieldnames(edge)
+# @show typeof(gotedge),fieldnames(gotedge)
+# @show cloudVert1.neo4jNode.create_relationship
+# [:relstart,:property,:self,:properties,:reltype,:relend,:data,:id,:graph]
+
+
+# @test json(edge) == json(gotedge)
+
+# print("[TEST] Finding out_neighbors of a vertex")
+# CloudGraphs.out_neighbors(cloudGraph, cloudVert1)
+# @test false
 
 #print("[Test] Retrieving the edge from the database...")
 #@test false

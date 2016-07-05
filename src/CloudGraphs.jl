@@ -7,10 +7,10 @@ using ProtoBuf;
 using JSON;
 
 #Types
-export CloudGraphConfiguration, CloudGraph, CloudVertex, BigData
+export CloudGraphConfiguration, CloudGraph, CloudVertex, CloudEdge, BigData
 #Functions
 export connect, disconnect, add_vertex!, get_vertex, update_vertex!, delete_vertex!
-export add_edge!, update_edge!, delete_edge!
+export add_edge!, update_edge!, delete_edge!, get_edge
 export cloudVertex2ExVertex, exVertex2CloudVertex
 export registerPackedType!
 
@@ -84,12 +84,18 @@ type CloudEdge
   neo4jEdge::Union{Void,Neo4j.Relationship}
   edgeType::UTF8String
   neo4jSourceVertexId::Int
-  neo4jSourceVertex::Union{Void,Neo4j.Node}
+  SourceVertex::Union{Void,CloudGraphs.CloudVertex}  #neo4jSourceVertex::Union{Void,Neo4j.Node}
   neo4jDestVertexId::Int
-  neo4jDestVertex::Union{Void,Neo4j.Node}
+  DestVertex::Union{Void,CloudGraphs.CloudVertex}  #neo4jDestVertex::Union{Void,Neo4j.Node}
   properties::Dict{UTF8String, Any} #AbstractString
   CloudEdge() = new(-1, nothing, "", -1, nothing, -1, nothing, Dict{UTF8String, Any}())
-  CloudEdge(vertexSrc::CloudVertex, vertexDest::CloudVertex, edgeType::AbstractString; props::Dict{UTF8String, Any}=Dict{UTF8String, Any}()) = new(-1, nothing, utf8(edgeType), vertexSrc.neo4jNodeId, vertexSrc.neo4jNode,  vertexDest.neo4jNodeId, vertexDest.neo4jNode, props)
+  CloudEdge(vertexSrc::CloudVertex, vertexDest::CloudVertex, edgeType::AbstractString; props::Dict{UTF8String, Any}=Dict{UTF8String, Any}()) = new(
+    -1, nothing, utf8(edgeType),
+    vertexSrc.neo4jNodeId,
+    vertexSrc, #.neo4jNode,
+    vertexDest.neo4jNodeId,
+    vertexDest, #.neo4jNode,
+    props)
 end
 
 import Base.connect
@@ -198,8 +204,12 @@ end
 
 function add_vertex!(cg::CloudGraph, vertex::CloudVertex)
   try
-    vertex.neo4jNode = Neo4j.createnode(cg.neo4j.graph, cloudVertex2NeoProps(cg, vertex));
+    props = cloudVertex2NeoProps(cg, vertex)
+    vertex.neo4jNode = Neo4j.createnode(cg.neo4j.graph, props);
     vertex.neo4jNodeId = vertex.neo4jNode.id;
+    vertex.isValidNeoNodeId = true
+    # make sure original struct gets the new bits of data it should have -- rather show than hide?
+    # for ky in ["packed"; "packedType"]  vertex.properties[ky] = props[ky] end
     return vertex.neo4jNode;
   catch e
     rethrow(e);
@@ -218,7 +228,7 @@ function get_vertex(cg::CloudGraph, neoNodeId::Int, retrieveBigData::Bool)
     # Unpack the packed data using an interim UInt8[].
     pData = convert(Array{UInt8}, props["packed"]);
     pB = PipeBuffer(pData);
-    @show props["packedType"]
+    # @show props["packedType"]
 
     typePackedRegName = props["packedType"];
 
@@ -269,15 +279,36 @@ function delete_vertex!(cg::CloudGraph, vertex::CloudVertex)
   vertex.neo4jNodeId = -1;
 end
 
+
 function add_edge!(cg::CloudGraph, edge::CloudEdge)
-  if(edge.neo4jSourceVertex == nothing)
+  if(edge.SourceVertex.neo4jNode == nothing)
     error("There isn't a valid source Neo4j in this CloudEdge.");
   end
-  if(edge.neo4jDestVertex == nothing)
+  if(edge.DestVertex.neo4jNode == nothing)
     error("There isn't a valid destination Neo4j in this CloudEdge.");
   end
 
-  Neo4j.createrel(edge.neo4jSourceVertex, edge.neo4jDestVertex, edge.edgeType; props=edge.properties );
+  retrel = Neo4j.createrel(edge.SourceVertex.neo4jNode, edge.DestVertex.neo4jNode, edge.edgeType; props=edge.properties );
+  edge.neo4jEdgeId = retrel.id
+  retrel
+end
+
+function get_edge(cg::CloudGraph, neoEdgeId::Int)
+  try
+    neoEdge = Neo4j.getrel(cg.neo4j.graph, neoEdgeId);
+    startid = parse(Int,split(neoEdge.relstart,'/')[end])
+    endid = parse(Int,split(neoEdge.relend,'/')[end])
+    cloudVert1 = CloudGraphs.get_vertex(cg, startid, false)
+    cloudVert2 = CloudGraphs.get_vertex(cg, endid, false)
+    # Get the node properties.
+    # props = neoEdge.data; # TODO
+    edge = CloudGraphs.CloudEdge(cloudVert1, cloudVert2, neoEdge.reltype);
+    edge.neo4jEdgeId = neoEdge.id
+
+    return edge #CloudEdge(recvOrigType, props, bigData, neoNodeId, neoNode, true, -1, false);
+  catch e
+    rethrow(e);
+  end
 end
 
 function update_edge!()
@@ -285,5 +316,9 @@ end
 
 function delete_edge!()
 end
+
+# function out_neighbors(cg::CloudGraphs, vert::CloudVertex)
+#   nothing
+# end
 
 end #module
