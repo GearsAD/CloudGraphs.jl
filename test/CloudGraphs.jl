@@ -139,24 +139,23 @@ cloudVert2.properties["name"] = "Sam's Vertex 2";
 CloudGraphs.add_vertex!(cloudGraph, cloudVert1);
 CloudGraphs.add_vertex!(cloudGraph, cloudVert2);
 
-# Create an edge
+# Create an edge and add it to the graph.
 # Test props
 props = Dict{UTF8String, Any}(utf8("Test") => 8);
 edge = CloudGraphs.CloudEdge(cloudVert1, cloudVert2, "DEPENDENCE");
-
-print("  [TEST] Adding it to the graphs...")
-retedget = CloudGraphs.add_edge!(cloudGraph, edge);
+CloudGraphs.add_edge!(cloudGraph, edge);
+@test edge.neo4jEdge != nothing
+@test edge.neo4jEdgeId != -1
 println("Success!")
-#@test false
 
 print("[TEST] Get edge from graph")
 gotedge = CloudGraphs.get_edge(cloudGraph, edge.neo4jEdgeId)
 @test typeof(gotedge) == CloudGraphs.CloudEdge
 @test edge.neo4jEdgeId == gotedge.neo4jEdgeId
+@test gotedge.neo4jEdge != edge.neo4jEdge
 @test edge.edgeType == gotedge.edgeType
 @test edge.neo4jSourceVertexId == gotedge.neo4jSourceVertexId
 @test edge.neo4jDestVertexId == gotedge.neo4jDestVertexId
-@test edge.neo4jEdge == gotedge.neo4jEdge
 @test edge.properties == gotedge.properties
 
 function testCloudGraphsNodeCompares(a::Neo4j.Node, b::Neo4j.Node)
@@ -201,8 +200,16 @@ testCloudGraphsNodeCompares(edge.SourceVertex.neo4jNode, gotedge.SourceVertex.ne
 # @test json(edge) == json(gotedge)
 println("Success!")
 
-print("[TEST] Finding out_neighbors of a vertex")
+print("[TEST] Finding all neighbors of a vertex...")
 neighs = CloudGraphs.get_neighbors(cloudGraph, cloudVert1)
 @test length(neighs) == 1
 @test neighs[1].neo4jNodeId == cloudVert2.neo4jNodeId
+println("Success!")
+
+print("[TEST] Deleting an edge...")
+CloudGraphs.delete_edge!(cloudGraph, edge)
+neighs = CloudGraphs.get_neighbors(cloudGraph, cloudVert1)
+@test length(neighs) == 0
+@test edge.neo4jEdgeId == -1
+@test edge.neo4jEdge == Void
 println("Success!")

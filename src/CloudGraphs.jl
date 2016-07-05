@@ -10,7 +10,7 @@ using JSON;
 export CloudGraphConfiguration, CloudGraph, CloudVertex, CloudEdge, BigData
 #Functions
 export connect, disconnect, add_vertex!, get_vertex, update_vertex!, delete_vertex!
-export add_edge!, update_edge!, delete_edge!, get_edge
+export add_edge!, delete_edge!, get_edge
 export get_neighbors
 export cloudVertex2ExVertex, exVertex2CloudVertex
 export registerPackedType!
@@ -281,6 +281,8 @@ function delete_vertex!(cg::CloudGraph, vertex::CloudVertex)
 
   vertex.neo4jNode = nothing;
   vertex.neo4jNodeId = -1;
+  vertex.isValidNeoNodeId = false;
+  nothing;
 end
 
 
@@ -292,8 +294,8 @@ function add_edge!(cg::CloudGraph, edge::CloudEdge)
     error("There isn't a valid destination Neo4j in this CloudEdge.");
   end
 
-
   retrel = Neo4j.createrel(edge.SourceVertex.neo4jNode, edge.DestVertex.neo4jNode, edge.edgeType; props=edge.properties );
+  edge.neo4jEdge = retrel;
   edge.neo4jEdgeId = retrel.id
 
   # add destid to sourcevert and visa versa
@@ -327,17 +329,36 @@ function get_edge(cg::CloudGraph, neoEdgeId::Int)
     # props = neoEdge.data; # TODO
     edge = CloudGraphs.CloudEdge(cloudVert1, cloudVert2, neoEdge.reltype);
     edge.neo4jEdgeId = neoEdge.id
+    edge.neo4jEdge = neoEdge
 
-    return edge #CloudEdge(recvOrigType, props, bigData, neoNodeId, neoNode, true, -1, false);
+    return edge
   catch e
     rethrow(e);
   end
 end
 
-function update_edge!()
-end
+#function update_edge!()
+#end
 
-function delete_edge!()
+function delete_edge!(cg::CloudGraph, edge::CloudEdge)
+  if(edge.SourceVertex == nothing)
+    error("There isn't a valid source Neo4j in this CloudEdge.");
+  end
+  if(edge.DestVertex == nothing)
+    error("There isn't a valid destination Neo4j in this CloudEdge.");
+  end
+
+  Neo4j.deleterel(edge.neo4jEdge)
+  edge.neo4jEdge = nothing;
+  edge.neo4jEdgeId = -1;
+  # Remove from either nodes.
+  edge.SourceVertex.properties["neighborVertexIDs"] = edge.SourceVertex.properties["neighborVertexIDs"][edge.SourceVertex.properties["neighborVertexIDs"] .!= edge.DestVertex.neo4jNodeId];
+  edge.DestVertex.properties["neighborVertexIDs"] = edge.DestVertex.properties["neighborVertexIDs"][edge.DestVertex.properties["neighborVertexIDs"] .!= edge.SourceVertex.neo4jNodeId];
+  # Update the vertices
+  update_vertex!(cg, edge.SourceVertex);
+  update_vertex!(cg, edge.DestVertex);
+
+  nothing;
 end
 
 function get_neighbors(cg::CloudGraph, vert::CloudVertex)
