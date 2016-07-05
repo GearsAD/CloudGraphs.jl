@@ -143,7 +143,8 @@ CloudGraphs.add_vertex!(cloudGraph, cloudVert2);
 # Test props
 props = Dict{UTF8String, Any}(utf8("Test") => 8);
 edge = CloudGraphs.CloudEdge(cloudVert1, cloudVert2, "DEPENDENCE");
-print("[TEST] Adding it to the graphs...")
+
+print("  [TEST] Adding it to the graphs...")
 retedget = CloudGraphs.add_edge!(cloudGraph, edge);
 println("Success!")
 #@test false
@@ -199,17 +200,9 @@ testCloudGraphsNodeCompares(edge.SourceVertex.neo4jNode, gotedge.SourceVertex.ne
 
 # @test json(edge) == json(gotedge)
 println("Success!")
-# @show typeof(edge),fieldnames(edge)
-# @show typeof(gotedge),fieldnames(gotedge)
-# @show cloudVert1.neo4jNode.create_relationship
-# [:relstart,:property,:self,:properties,:reltype,:relend,:data,:id,:graph]
 
-
-# @test json(edge) == json(gotedge)
-
-# print("[TEST] Finding out_neighbors of a vertex")
-# CloudGraphs.out_neighbors(cloudGraph, cloudVert1)
-# @test false
-
-#print("[Test] Retrieving the edge from the database...")
-#@test false
+print("[TEST] Finding out_neighbors of a vertex")
+neighs = CloudGraphs.get_neighbors(cloudGraph, cloudVert1)
+@test length(neighs) == 1
+@test neighs[1].neo4jNodeId == cloudVert2.neo4jNodeId
+println("Success!")
