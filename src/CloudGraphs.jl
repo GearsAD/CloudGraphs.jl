@@ -207,6 +207,7 @@ function add_vertex!(cg::CloudGraph, vertex::CloudVertex)
     props = cloudVertex2NeoProps(cg, vertex)
     vertex.neo4jNode = Neo4j.createnode(cg.neo4j.graph, props);
     vertex.neo4jNodeId = vertex.neo4jNode.id;
+    vertex.isValidNeoNodeId = true
     # make sure original struct gets the new bits of data it should have -- rather show than hide?
     # for ky in ["packed"; "packedType"]  vertex.properties[ky] = props[ky] end
     return vertex.neo4jNode;
@@ -301,7 +302,7 @@ function get_edge(cg::CloudGraph, neoEdgeId::Int)
     cloudVert2 = CloudGraphs.get_vertex(cg, endid, false)
     # Get the node properties.
     # props = neoEdge.data; # TODO
-    edge = CloudGraphs.CloudEdge(cloudVert1, cloudVert2, "DEPENDENCE");
+    edge = CloudGraphs.CloudEdge(cloudVert1, cloudVert2, neoEdge.reltype);
     edge.neo4jEdgeId = neoEdge.id
 
     return edge #CloudEdge(recvOrigType, props, bigData, neoNodeId, neoNode, true, -1, false);
