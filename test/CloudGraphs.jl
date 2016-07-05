@@ -133,9 +133,9 @@ end
 print("[TEST] Making an edge...")
 # Create two vertices
 cloudVert1 = deepcopy(cloudVertex);
-cloudVert1.properties["name"] = "Sam's Vertex 1";
+cloudVert1.properties["label"] = "Sam's Vertex 1";
 cloudVert2 = deepcopy(cloudVertex);
-cloudVert2.properties["name"] = "Sam's Vertex 2";
+cloudVert2.properties["label"] = "Sam's Vertex 2";
 CloudGraphs.add_vertex!(cloudGraph, cloudVert1);
 CloudGraphs.add_vertex!(cloudGraph, cloudVert2);
 

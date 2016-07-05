@@ -148,10 +148,14 @@ function exVertex2CloudVertex(vertex::ExVertex)
 end
 
 function cloudVertex2ExVertex(vertex::CloudVertex)
-  # populate the data container
-
   # create an ExVertex
+  vert = Graphs.ExVertex(vertex.neo4jNodeId, vertex.properties["label"])
+  vert.attributes = Graphs.AttributeDict()
+  vert.attributes = vertex.properties
 
+  # populate the data container
+  vert.attributes["data"] = vertex.packed
+  return vert
 end
 
 # --- Internal utility methods ---
