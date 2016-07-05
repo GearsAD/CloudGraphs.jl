@@ -11,6 +11,7 @@ export CloudGraphConfiguration, CloudGraph, CloudVertex, CloudEdge, BigData
 #Functions
 export connect, disconnect, add_vertex!, get_vertex, update_vertex!, delete_vertex!
 export add_edge!, update_edge!, delete_edge!, get_edge
+export get_neighbors
 export cloudVertex2ExVertex, exVertex2CloudVertex
 export registerPackedType!
 
@@ -147,6 +148,9 @@ function exVertex2CloudVertex(vertex::ExVertex)
 end
 
 function cloudVertex2ExVertex(vertex::CloudVertex)
+  # populate the data container
+
+  # create an ExVertex
 
 end
 
@@ -288,8 +292,27 @@ function add_edge!(cg::CloudGraph, edge::CloudEdge)
     error("There isn't a valid destination Neo4j in this CloudEdge.");
   end
 
+
   retrel = Neo4j.createrel(edge.SourceVertex.neo4jNode, edge.DestVertex.neo4jNode, edge.edgeType; props=edge.properties );
   edge.neo4jEdgeId = retrel.id
+
+  # add destid to sourcevert and visa versa
+  if haskey(edge.SourceVertex.properties, "neighborVertexIDs")
+    push!(edge.SourceVertex.properties["neighborVertexIDs"], edge.DestVertex.neo4jNodeId)
+    edge.SourceVertex.properties["neighborVertexIDs"] = union(edge.SourceVertex.properties["neighborVertexIDs"], [edge.DestVertex.neo4jNodeId])
+  else
+    edge.SourceVertex.properties["neighborVertexIDs"] = Array{Int64,1}([edge.DestVertex.neo4jNodeId])
+  end
+  if haskey(edge.DestVertex.properties, "neighborVertexIDs")
+    push!(edge.DestVertex.properties["neighborVertexIDs"], edge.SourceVertex.neo4jNodeId)
+    edge.DestVertex.properties["neighborVertexIDs"] = union(edge.DestVertex.properties["neighborVertexIDs"], [edge.SourceVertex.neo4jNodeId])
+  else
+    edge.DestVertex.properties["neighborVertexIDs"] = Array{Int64,1}([edge.SourceVertex.neo4jNodeId])
+  end
+
+  update_vertex!(cg, edge.SourceVertex)
+  update_vertex!(cg, edge.DestVertex)
+
   retrel
 end
 
@@ -317,8 +340,12 @@ end
 function delete_edge!()
 end
 
-# function out_neighbors(cg::CloudGraphs, vert::CloudVertex)
-#   nothing
-# end
+function get_neighbors(cg::CloudGraph, vert::CloudVertex)
+  neighbors = CloudVertex[]
+  for vid in vert.properties["neighborVertexIDs"]
+    push!(neighbors, CloudGraphs.get_vertex(cg, (vid), false)) # careful with Int64 and LibBSON
+  end
+  neighbors
+end
 
 end #module
