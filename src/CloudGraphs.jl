@@ -149,7 +149,7 @@ end
 
 function cloudVertex2ExVertex(vertex::CloudVertex)
   # create an ExVertex
-  vert = Graphs.ExVertex(vertex.neo4jNodeId, vertex.properties["label"])
+  vert = Graphs.ExVertex(vertex.exVertexId, vertex.properties["label"])
   vert.attributes = Graphs.AttributeDict()
   vert.attributes = vertex.properties
 
