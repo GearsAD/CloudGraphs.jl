@@ -144,7 +144,7 @@ function exVertex2CloudVertex(vertex::ExVertex)
     end
   end
   #3. Encode the packed data and big data.
-  return CloudVertex(packed, cgvProperties, bigData, -1, nothing, false, -1, false);
+  return CloudVertex(packed, cgvProperties, bigData, -1, nothing, false, vertex.index, false);
 end
 
 function cloudVertex2ExVertex(vertex::CloudVertex)
@@ -195,6 +195,8 @@ function cloudVertex2NeoProps(cg::CloudGraph, vertex::CloudVertex)
   vertex.bigData.data = Vector{UInt8}();
   props["bigData"] = json(vertex.bigData);
   vertex.bigData.data = saved;
+
+  props["exVertexId"] = vertex.exVertexId
 
   # @show props["packedType"]
   # @show size(props["data"])
@@ -252,10 +254,12 @@ function get_vertex(cg::CloudGraph, neoNodeId::Int, retrieveBigData::Bool)
     delete!(props, "data");
     delete!(props, "packedType");
     delete!(props, "bigData");
+    exvid = props["exVertexId"]
+    delete!(props, "exVertexId")
 
     # Build a CloudGraph node.
     # TODO -- GearsAD please check that we want recvOrigType vs packed as first argument
-    return CloudVertex(recvOrigType, props, bigData, neoNodeId, neoNode, true, -1, false);
+    return CloudVertex(recvOrigType, props, bigData, neoNodeId, neoNode, true, exvid, false);
   catch e
     rethrow(e);
   end
