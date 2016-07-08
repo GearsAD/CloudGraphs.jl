@@ -369,7 +369,13 @@ function delete_edge!(cg::CloudGraph, edge::CloudEdge)
   nothing;
 end
 
-function get_neighbors(cg::CloudGraph, vert::CloudVertex)
+# convenience version, and probably much faster
+# function get_all_neighbors(cg::CloudGraph, neoVertId::Int64)
+#
+#   neighbors #::Array{CloudVertex,1}
+# end
+function get_neighbors(cg::CloudGraph, vert::CloudVertex) #get_all_neighbors
+  # return get_all_neighbors(cg, vert.neo4jNodeId)
   neighbors = CloudVertex[]
   for vid in vert.properties["neighborVertexIDs"]
     push!(neighbors, CloudGraphs.get_vertex(cg, (vid), false)) # careful with Int64 and LibBSON
