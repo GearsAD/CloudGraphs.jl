@@ -211,5 +211,5 @@ CloudGraphs.delete_edge!(cloudGraph, edge)
 neighs = CloudGraphs.get_neighbors(cloudGraph, cloudVert1)
 @test length(neighs) == 0
 @test edge.neo4jEdgeId == -1
-@test edge.neo4jEdge == Void
+@test edge.neo4jEdge == nothing
 println("Success!")

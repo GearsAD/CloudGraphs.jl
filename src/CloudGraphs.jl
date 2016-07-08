@@ -102,7 +102,7 @@ end
 import Base.connect
 # --- CloudGraph initialization ---
 function connect(configuration::CloudGraphConfiguration)
-  neoConn = Neo4j.Connection(configuration.neo4jHost, configuration.neo4jPort);
+  neoConn = Neo4j.Connection(configuration.neo4jHost, port=configuration.neo4jPort);
   neo4j = Neo4jInstance(neoConn, Neo4j.getgraph(neoConn));
 
   return CloudGraph(configuration, neo4j);
