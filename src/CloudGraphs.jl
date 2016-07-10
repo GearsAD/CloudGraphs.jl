@@ -43,7 +43,6 @@ end
 type CloudGraphConfiguration
   neo4jHost::UTF8String
   neo4jPort::Int
-  neo4jIsUsingCredentials::Bool
   neo4jUsername::UTF8String
   neo4jPassword::UTF8String
   mongoHost::UTF8String
@@ -102,7 +101,7 @@ end
 import Base.connect
 # --- CloudGraph initialization ---
 function connect(configuration::CloudGraphConfiguration)
-  neoConn = Neo4j.Connection(configuration.neo4jHost, port=configuration.neo4jPort);
+  neoConn = Neo4j.Connection(configuration.neo4jHost, port=configuration.neo4jPort, user=configuration.neo4jUsername, password=configuration.neo4jPassword);
   neo4j = Neo4jInstance(neoConn, Neo4j.getgraph(neoConn));
 
   return CloudGraph(configuration, neo4j);
@@ -203,8 +202,36 @@ function cloudVertex2NeoProps(cg::CloudGraph, vertex::CloudVertex)
   return props;
 end
 
-# function neoNode2CloudVertex(props::)
-# end
+function neoNode2CloudVertex(cg::CloudGraph, neoNode::Neo4j.Node)
+  # Get the node properties.
+  props = neoNode.data; #Neo4j.getnodeproperties(neoNode);
+
+  # Unpack the packed data using an interim UInt8[].
+  pData = convert(Array{UInt8}, props["data"]);
+  pB = PipeBuffer(pData);
+  # @show props["packedType"]
+
+  typePackedRegName = props["packedType"];
+
+  packed = readproto(pB, cg.packedPackedDataTypes[typePackedRegName].packingType() );
+  recvOrigType = cg.packedPackedDataTypes[typePackedRegName].decodingFunction(packed);
+
+  # Big data
+  bDS = JSON.parse(props["bigData"]);
+  bigData = BigData(bDS["isRetrieved"], bDS["isAvailable"], bDS["isExistingOnServer"], bDS["mongoKey"], 0);
+  #bigData = BigData(bDS["isRetrieved"], bDS["isAvailable"], bDS["isExistingOnServer"],  0);
+
+  # Now delete these out the props leaving the rest as general properties
+  delete!(props, "data");
+  delete!(props, "packedType");
+  delete!(props, "bigData");
+  exvid = props["exVertexId"]
+  delete!(props, "exVertexId")
+
+  # Build a CloudGraph node.
+  # TODO -- GearsAD please check that we want recvOrigType vs packed as first argument
+  return CloudVertex(recvOrigType, props, bigData, neoNode.metadata["id"], neoNode, true, exvid, false);
+end
 
 # --- Graphs.jl overloads ---
 
@@ -232,34 +259,7 @@ function get_vertex(cg::CloudGraph, neoNodeId::Int, retrieveBigData::Bool)
   try
     neoNode = Neo4j.getnode(cg.neo4j.graph, neoNodeId);
 
-    # Get the node properties.
-    props = neoNode.data; #Neo4j.getnodeproperties(neoNode);
-
-    # Unpack the packed data using an interim UInt8[].
-    pData = convert(Array{UInt8}, props["data"]);
-    pB = PipeBuffer(pData);
-    # @show props["packedType"]
-
-    typePackedRegName = props["packedType"];
-
-    packed = readproto(pB, cg.packedPackedDataTypes[typePackedRegName].packingType() );
-    recvOrigType = cg.packedPackedDataTypes[typePackedRegName].decodingFunction(packed);
-
-    # Big data
-    bDS = JSON.parse(props["bigData"]);
-    bigData = BigData(bDS["isRetrieved"], bDS["isAvailable"], bDS["isExistingOnServer"], bDS["mongoKey"], 0);
-    #bigData = BigData(bDS["isRetrieved"], bDS["isAvailable"], bDS["isExistingOnServer"],  0);
-
-    # Now delete these out the props leaving the rest as general properties
-    delete!(props, "data");
-    delete!(props, "packedType");
-    delete!(props, "bigData");
-    exvid = props["exVertexId"]
-    delete!(props, "exVertexId")
-
-    # Build a CloudGraph node.
-    # TODO -- GearsAD please check that we want recvOrigType vs packed as first argument
-    return CloudVertex(recvOrigType, props, bigData, neoNodeId, neoNode, true, exvid, false);
+    return(neoNode2CloudVertex(cg, neoNode))
   catch e
     rethrow(e);
   end
@@ -369,18 +369,18 @@ function delete_edge!(cg::CloudGraph, edge::CloudEdge)
   nothing;
 end
 
-# convenience version, and probably much faster
-# function get_all_neighbors(cg::CloudGraph, neoVertId::Int64)
-#
-#   neighbors #::Array{CloudVertex,1}
-# end
-function get_neighbors(cg::CloudGraph, vert::CloudVertex) #get_all_neighbors
-  # return get_all_neighbors(cg, vert.neo4jNodeId)
-  neighbors = CloudVertex[]
-  for vid in vert.properties["neighborVertexIDs"]
-    push!(neighbors, CloudGraphs.get_vertex(cg, (vid), false)) # careful with Int64 and LibBSON
+function get_neighbors(cg::CloudGraph, vert::CloudVertex; incoming::Bool=true, outgoing::Bool=true)
+  if(vert.neo4jNode == nothing)
+    error("The provided vertex does not have it's associated Neo4j Node (vertex.neo4jNode) - please perform a get_vertex to get the complete structure first.")
   end
-  neighbors
+
+  neo4jNeighbors = Neo4j.getneighbors(vert.neo4jNode, incoming=incoming, outgoing=outgoing)
+
+  neighbors = CloudVertex[]
+  for neoNeighbor in neo4jNeighbors
+    push!(neighbors, neoNode2CloudVertex(cg, neoNeighbor))
+  end
+  return(neighbors)
 end
 
 end #module

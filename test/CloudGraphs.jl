@@ -7,7 +7,7 @@ using CloudGraphs;
 
 # Creating a connection
 print("[TEST] Connecting to the local CloudGraphs instance (Neo4j and Mongo)...");
-configuration = CloudGraphs.CloudGraphConfiguration("localhost", 7474, false, "", "", "localhost", 27017, false, "", "");
+configuration = CloudGraphs.CloudGraphConfiguration("localhost", 7474, "neo4j", "neo5j", "localhost", 27017, false, "", "");
 cloudGraph = connect(configuration);
 println("Success!");
 
@@ -123,12 +123,8 @@ catch
   print("Success!")
 end
 # Testing the deletion of an apparently existing node
-try
-  CloudGraphs.delete_vertex!(cloudGraph, cloudVertexRet);
-  @test false
-catch
-  print("Success!")
-end
+@test_throws ErrorException CloudGraphs.delete_vertex!(cloudGraph, cloudVertexRet);
+print("Success!")
 
 print("[TEST] Making an edge...")
 # Create two vertices
@@ -136,27 +132,38 @@ cloudVert1 = deepcopy(cloudVertex);
 cloudVert1.properties["label"] = "Sam's Vertex 1";
 cloudVert2 = deepcopy(cloudVertex);
 cloudVert2.properties["label"] = "Sam's Vertex 2";
+cloudVert3 = deepcopy(cloudVertex);
+cloudVert3.properties["label"] = "Sam's Vertex 3";
 CloudGraphs.add_vertex!(cloudGraph, cloudVert1);
 CloudGraphs.add_vertex!(cloudGraph, cloudVert2);
+CloudGraphs.add_vertex!(cloudGraph, cloudVert3);
 
 # Create an edge and add it to the graph.
 # Test props
 props = Dict{UTF8String, Any}(utf8("Test") => 8);
-edge = CloudGraphs.CloudEdge(cloudVert1, cloudVert2, "DEPENDENCE");
-CloudGraphs.add_edge!(cloudGraph, edge);
-@test edge.neo4jEdge != nothing
-@test edge.neo4jEdgeId != -1
+edge12 = CloudGraphs.CloudEdge(cloudVert1, cloudVert2, "DEPENDENCE");
+CloudGraphs.add_edge!(cloudGraph, edge12);
+edge23 = CloudGraphs.CloudEdge(cloudVert2, cloudVert3, "DEPENDENCE");
+CloudGraphs.add_edge!(cloudGraph, edge23);
+edge31 = CloudGraphs.CloudEdge(cloudVert3, cloudVert1, "DEPENDENCE");
+CloudGraphs.add_edge!(cloudGraph, edge31);
+@test edge12.neo4jEdge != nothing
+@test edge12.neo4jEdgeId != -1
+@test edge23.neo4jEdge != nothing
+@test edge23.neo4jEdgeId != -1
+@test edge31.neo4jEdge != nothing
+@test edge31.neo4jEdgeId != -1
 println("Success!")
 
-print("[TEST] Get edge from graph")
-gotedge = CloudGraphs.get_edge(cloudGraph, edge.neo4jEdgeId)
+print("[TEST] Get edge from graph...")
+gotedge = CloudGraphs.get_edge(cloudGraph, edge12.neo4jEdgeId)
 @test typeof(gotedge) == CloudGraphs.CloudEdge
-@test edge.neo4jEdgeId == gotedge.neo4jEdgeId
-@test gotedge.neo4jEdge != edge.neo4jEdge
-@test edge.edgeType == gotedge.edgeType
-@test edge.neo4jSourceVertexId == gotedge.neo4jSourceVertexId
-@test edge.neo4jDestVertexId == gotedge.neo4jDestVertexId
-@test edge.properties == gotedge.properties
+@test edge12.neo4jEdgeId == gotedge.neo4jEdgeId
+@test gotedge.neo4jEdge != edge12.neo4jEdge
+@test edge12.edgeType == gotedge.edgeType
+@test edge12.neo4jSourceVertexId == gotedge.neo4jSourceVertexId
+@test edge12.neo4jDestVertexId == gotedge.neo4jDestVertexId
+@test edge12.properties == gotedge.properties
 
 function testCloudGraphsNodeCompares(a::Neo4j.Node, b::Neo4j.Node)
   @test a.paged_traverse == b.paged_traverse
@@ -177,39 +184,47 @@ function testCloudGraphsNodeCompares(a::Neo4j.Node, b::Neo4j.Node)
   nothing
 end
 
-testCloudGraphsNodeCompares(edge.DestVertex.neo4jNode, gotedge.DestVertex.neo4jNode)
-testCloudGraphsNodeCompares(edge.SourceVertex.neo4jNode, gotedge.SourceVertex.neo4jNode)
+testCloudGraphsNodeCompares(edge12.DestVertex.neo4jNode, gotedge.DestVertex.neo4jNode)
+testCloudGraphsNodeCompares(edge12.SourceVertex.neo4jNode, gotedge.SourceVertex.neo4jNode)
 
-  # edge.neo4jSourceVertex.data
-  # gotedge.neo4jSourceVertex.data
-
-
-@test   json(edge.SourceVertex.packed) == json(gotedge.SourceVertex.packed)
-@test   edge.SourceVertex.properties == gotedge.SourceVertex.properties
+@test json(edge12.SourceVertex.packed) == json(gotedge.SourceVertex.packed)
+@test edge12.SourceVertex.properties == gotedge.SourceVertex.properties
   #@test  edge.SourceVertex.bigData == gotedge.SourceVertex.bigData
-@test   edge.SourceVertex.neo4jNodeId == gotedge.SourceVertex.neo4jNodeId
-# @test   edge.SourceVertex.neo4jNode == gotedge.SourceVertex.neo4jNode
-@test   edge.SourceVertex.isValidNeoNodeId == gotedge.SourceVertex.isValidNeoNodeId
-# @test   edge.SourceVertex.exVertexId == gotedge.SourceVertex.exVertexId
-@test   edge.SourceVertex.isValidExVertex == gotedge.SourceVertex.isValidExVertex
-
-#failing here
-# @test edge.SourceVertex == gotedge.SourceVertex
-# @test edge.DestVertex == gotedge.DestVertex
-
-# @test json(edge) == json(gotedge)
+@test   edge12.SourceVertex.neo4jNodeId == gotedge.SourceVertex.neo4jNodeId
+# @test   edge12.SourceVertex.neo4jNode == gotedge.SourceVertex.neo4jNode
+@test   edge12.SourceVertex.isValidNeoNodeId == gotedge.SourceVertex.isValidNeoNodeId
+# @test   edge12.SourceVertex.exVertexId == gotedge.SourceVertex.exVertexId
+@test   edge12.SourceVertex.isValidExVertex == gotedge.SourceVertex.isValidExVertex
 println("Success!")
 
 print("[TEST] Finding all neighbors of a vertex...")
-neighs = CloudGraphs.get_neighbors(cloudGraph, cloudVert1)
-@test length(neighs) == 1
-@test neighs[1].neo4jNodeId == cloudVert2.neo4jNodeId
+neighs1 = CloudGraphs.get_neighbors(cloudGraph, cloudVert1)
+neighs1in = CloudGraphs.get_neighbors(cloudGraph, cloudVert1, incoming=true, outgoing=false)
+neighs1out = CloudGraphs.get_neighbors(cloudGraph, cloudVert1, incoming=false, outgoing=true)
+
+@show neighs1
+@test length(neighs1) == 2
+@test length(neighs1in) == 1
+@test length(neighs1out) == 1
+@test neighs1[1].neo4jNodeId == cloudVert3.neo4jNodeId || neighs1[2].neo4jNodeId == cloudVert3.neo4jNodeId
+@test neighs1[1].neo4jNodeId == cloudVert2.neo4jNodeId || neighs1[2].neo4jNodeId == cloudVert2.neo4jNodeId
+@test neighs1in[1].neo4jNodeId == cloudVert3.neo4jNodeId
+@test neighs1out[1].neo4jNodeId == cloudVert2.neo4jNodeId
 println("Success!")
 
+
 print("[TEST] Deleting an edge...")
-CloudGraphs.delete_edge!(cloudGraph, edge)
+CloudGraphs.delete_edge!(cloudGraph, edge12)
+CloudGraphs.delete_edge!(cloudGraph, edge23)
+CloudGraphs.delete_edge!(cloudGraph, edge31)
 neighs = CloudGraphs.get_neighbors(cloudGraph, cloudVert1)
 @test length(neighs) == 0
-@test edge.neo4jEdgeId == -1
-@test edge.neo4jEdge == nothing
+@test edge12.neo4jEdgeId == -1
+@test edge12.neo4jEdge == nothing
+println("Success!")
+
+print("[TEST] Deleting nodes...")
+CloudGraphs.delete_vertex!(cloudGraph, cloudVert1)
+CloudGraphs.delete_vertex!(cloudGraph, cloudVert2)
+CloudGraphs.delete_vertex!(cloudGraph, cloudVert3)
 println("Success!")
