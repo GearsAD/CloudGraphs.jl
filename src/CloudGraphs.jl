@@ -301,7 +301,7 @@ end
 
 # Deprecating the native GetData calls for BigData.
 function get_vertex(cg::CloudGraph, neoNodeId::Int, retrieveBigData::Bool)
-  cgVertex = get_vertex(cg, neoNodeId, false)
+  cgVertex = get_vertex(cg, neoNodeId)
   if(retrieveBigData && cgVertex.bigData.isExistingOnServer)
     read_BigData!(cg, cgVertex);
   end
