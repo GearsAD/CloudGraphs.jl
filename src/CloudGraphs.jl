@@ -175,19 +175,40 @@ function set_BigData!(cg::CloudGraph, vertex::CloudVertex)
     aa[i]=parse(UInt8,ss[i])
   end
   #Write to Mongo
-  m_oid = insert(cg.mongo.cgBindataCollection, Dict("val" => stringImageData))
+  m_oid = insert(cg.mongo.cgBindataCollection, Dict("neoNodeId" => vertex.neo4jNodeId, "val" => stringImageData, ))
   @show "Saved big data to mongo id = $(m_oid)"
   #Update local instance
   vertex.bigData.mongoKey = m_oid;
   tempBigData = vertex.bigData.data;
-  vertex.bigData.isExistingOnServer = true; 
+  vertex.bigData.isExistingOnServer = true
   vertex.bigData.data = Vector{UInt8}();
   #Update the bigdata property
   setnodeproperty(vertex.neo4jNode, "bigData", json(vertex.bigData));
   vertex.bigData.data = tempBigData;
 end
 
-function read_BigData!(vertex::CloudVertex)
+function read_BigData!(cg::CloudGraph, vertex::CloudVertex)
+  if(vertex.bigData.isExistingOnServer == false)
+    error("The data does not exist on the server. 'isExistingOnServer' is false. Have you saved with set_BigData!()");
+  end
+  mongoId = BSONOID(vertex.bigData.mongoKey);
+  numNodes = count(cg.mongo.cgBindataCollection, ("_id" => mongoId));
+  if(numNodes != 1)
+    error("The query for $(mongoId) returned $(numNodes) values, expected a 1-to-1 mapping!");
+  end
+  results = first(find(cg.mongo.cgBindataCollection, ("_id" => eq(mongoId))));
+  # if(!haskey(results, "val"))
+  #   error("Expected a key 'val' from the node $(mongoId) in Mongo, doesn't seem to exist.");
+  # end
+  #Have it, now parse it until we have a native binary datatype.
+  ss = split(split(results["val"],'[')[2],',')[1:(end-2)]
+  aa = Vector{UInt8}(length(ss))
+  @inbounds @simd for i in 1:length(aa)
+    aa[i]=parse(UInt8,ss[i])
+  end
+  @show(aa)
+  vertex.bigData.data = aa;
+  return(aa)
 end
 
 function cloudVertex2NeoProps(cg::CloudGraph, vertex::CloudVertex)
@@ -278,8 +299,17 @@ function add_vertex!(cg::CloudGraph, vertex::CloudVertex)
   end
 end
 
-# Retrieve a vertex and decompress it into a CloudVertex
+# Deprecating the native GetData calls for BigData.
 function get_vertex(cg::CloudGraph, neoNodeId::Int, retrieveBigData::Bool)
+  cgVertex = get_vertex(cg, neoNodeId, false)
+  if(retrieveBigData && cgVertex.bigData.isExistingOnServer)
+    read_BigData!(cg, cgVertex);
+  end
+  return(cgVertex)
+end
+
+# Retrieve a vertex and decompress it into a CloudVertex
+function get_vertex(cg::CloudGraph, neoNodeId::Int)
   try
     neoNode = Neo4j.getnode(cg.neo4j.graph, neoNodeId);
 
