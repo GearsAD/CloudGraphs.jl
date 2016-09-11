@@ -167,15 +167,25 @@ end
 
 # --- Internal utility methods ---
 
-function set_BigData!(cg::CloudGraph, vertex::CloudVertex)
-  stringImageData = string(vertex.bigData.data);
-  ss = split(split(stringImageData,'[')[2],',')[1:(end-2)]
+# Until we can do Bindata.
+function _uint8ArrayToString(arr::Vector{Uint8})
+  return(string(arr));
+end
+
+# Until we can do Bindata.
+function _stringToUint8Array(packedString::AbstractString)
+  ss = split(split(packedString,'[')[2],',')[1:(end-2)]
   aa = Vector{UInt8}(length(ss))
   @inbounds @simd for i in 1:length(aa)
     aa[i]=parse(UInt8,ss[i])
   end
+  return(aa)
+end
+
+function set_BigData!(cg::CloudGraph, vertex::CloudVertex)
+  stringArray = _uint8ArrayToString(vertex.bigData.data);
   #Write to Mongo
-  m_oid = insert(cg.mongo.cgBindataCollection, Dict("neoNodeId" => vertex.neo4jNodeId, "val" => stringImageData, ))
+  m_oid = insert(cg.mongo.cgBindataCollection, Dict("neoNodeId" => vertex.neo4jNodeId, "val" => stringArray, ))
   @show "Saved big data to mongo id = $(m_oid)"
   #Update local instance
   vertex.bigData.mongoKey = m_oid;
@@ -201,14 +211,8 @@ function read_BigData!(cg::CloudGraph, vertex::CloudVertex)
   #   error("Expected a key 'val' from the node $(mongoId) in Mongo, doesn't seem to exist.");
   # end
   #Have it, now parse it until we have a native binary datatype.
-  ss = split(split(results["val"],'[')[2],',')[1:(end-2)]
-  aa = Vector{UInt8}(length(ss))
-  @inbounds @simd for i in 1:length(aa)
-    aa[i]=parse(UInt8,ss[i])
-  end
-  @show(aa)
-  vertex.bigData.data = aa;
-  return(aa)
+  vertex.bigData.data = _stringToUint8Array(results["val"]);
+  return(vertex.bigData.data)
 end
 
 function cloudVertex2NeoProps(cg::CloudGraph, vertex::CloudVertex)
