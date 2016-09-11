@@ -2,7 +2,8 @@ module CloudGraphs
 
 using Graphs;
 using Neo4j;
-# using Mongo;
+using Mongo;
+using LibBSON;
 using ProtoBuf;
 using JSON;
 
@@ -11,6 +12,7 @@ export CloudGraphConfiguration, CloudGraph, CloudVertex, CloudEdge, BigData
 #Functions
 export connect, disconnect, add_vertex!, get_vertex, update_vertex!, delete_vertex!
 export add_edge!, delete_edge!, get_edge
+export set_BigData!, read_BigData
 export get_neighbors
 export cloudVertex2ExVertex, exVertex2CloudVertex
 export registerPackedType!
@@ -20,7 +22,8 @@ type BigData
   isAvailable::Bool
   isExistingOnServer::Bool
   mongoKey::AbstractString
-  data::Any
+  # This is just for local use, and is not saved into the graph.
+  data::Vector{UInt8}
   BigData() = new(false, false, false, Void)
   BigData(isRetrieved::Bool, isAvailable::Bool, isExistingOnServer::Bool, data) = new(isRetrieved, isAvailable, isExistingOnServer, string(Base.Random.uuid4()), data)
   BigData(isRetrieved::Bool, isAvailable::Bool, isExistingOnServer::Bool, mongoKey::AbstractString, data) = new(isRetrieved, isAvailable, isExistingOnServer, mongoKey, data)
@@ -57,9 +60,10 @@ type Neo4jInstance
   graph::Neo4j.Graph
 end
 
-# type MongoDbInstance
-#   connection::Mongo.MongoClient
-# end
+type MongoDbInstance
+  client::Mongo.MongoClient
+  cgBindataCollection::MongoCollection
+end
 
 type PackedType
   originalType::Type
@@ -72,11 +76,11 @@ end
 type CloudGraph
   configuration::CloudGraphConfiguration
   neo4j::Neo4jInstance
-  #mongo::MongoDbInstance
+  mongo::MongoDbInstance
   packedPackedDataTypes::Dict{AbstractString, PackedType}
   packedOriginalDataTypes::Dict{AbstractString, PackedType}
-  CloudGraph(configuration, neo4j) = new(configuration, neo4j, Dict{AbstractString, PackedType}(), Dict{AbstractString, PackedType}())
-  CloudGraph(configuration, neo4j, packedDataTypes, originalDataTypes) = new(configuration, neo4j, packedDataTypes, originalDataTypes)
+  CloudGraph(configuration, neo4j, mongo) = new(configuration, neo4j, mongo, Dict{AbstractString, PackedType}(), Dict{AbstractString, PackedType}())
+  CloudGraph(configuration, neo4j, mongo, packedDataTypes, originalDataTypes) = new(configuration, neo4j, mongo, packedDataTypes, originalDataTypes)
 end
 
 type CloudEdge
@@ -104,7 +108,11 @@ function connect(configuration::CloudGraphConfiguration)
   neoConn = Neo4j.Connection(configuration.neo4jHost, port=configuration.neo4jPort, user=configuration.neo4jUsername, password=configuration.neo4jPassword);
   neo4j = Neo4jInstance(neoConn, Neo4j.getgraph(neoConn));
 
-  return CloudGraph(configuration, neo4j);
+  mongoClient = Mongo.MongoClient(configuration.mongoHost, configuration.mongoPort);
+  cgBindataCollection = Mongo.MongoCollection(mongoClient, "CloudGraphs", "bindata");
+  mongoInstance = MongoDbInstance(mongoClient, cgBindataCollection);
+
+  return CloudGraph(configuration, neo4j, mongoInstance);
 end
 
 # Register a type with an optional converter.
@@ -159,8 +167,24 @@ end
 
 # --- Internal utility methods ---
 
-function write_BigData(cg::CloudGraph, vertex::CloudVertex)
-
+function set_BigData!(cg::CloudGraph, vertex::CloudVertex)
+  stringImageData = string(vertex.bigData.data);
+  ss = split(split(stringImageData,'[')[2],',')[1:(end-2)]
+  aa = Vector{UInt8}(length(ss))
+  @inbounds @simd for i in 1:length(aa)
+    aa[i]=parse(UInt8,ss[i])
+  end
+  #Write to Mongo
+  m_oid = insert(cg.mongo.cgBindataCollection, Dict("val" => stringImageData))
+  @show "Saved big data to mongo id = $(m_oid)"
+  #Update local instance
+  vertex.bigData.mongoKey = m_oid;
+  tempBigData = vertex.bigData.data;
+  vertex.bigData.isExistingOnServer = true; 
+  vertex.bigData.data = Vector{UInt8}();
+  #Update the bigdata property
+  setnodeproperty(vertex.neo4jNode, "bigData", json(vertex.bigData));
+  vertex.bigData.data = tempBigData;
 end
 
 function read_BigData!(vertex::CloudVertex)
@@ -218,7 +242,7 @@ function neoNode2CloudVertex(cg::CloudGraph, neoNode::Neo4j.Node)
 
   # Big data
   bDS = JSON.parse(props["bigData"]);
-  bigData = BigData(bDS["isRetrieved"], bDS["isAvailable"], bDS["isExistingOnServer"], bDS["mongoKey"], 0);
+  bigData = BigData(bDS["isRetrieved"], bDS["isAvailable"], bDS["isExistingOnServer"], bDS["mongoKey"], Vector{Uint8}());
   #bigData = BigData(bDS["isRetrieved"], bDS["isAvailable"], bDS["isExistingOnServer"],  0);
 
   # Now delete these out the props leaving the rest as general properties
@@ -277,6 +301,8 @@ function update_vertex!(cg::CloudGraph, vertex::CloudVertex)
     rethrow(e);
   end
 end
+
+
 
 function delete_vertex!(cg::CloudGraph, vertex::CloudVertex)
   if(vertex.neo4jNode == nothing)
