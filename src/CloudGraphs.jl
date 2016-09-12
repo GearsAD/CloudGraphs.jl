@@ -175,7 +175,7 @@ end
 # --- Internal utility methods ---
 
 # Until we can do Bindata.
-function _uint8ArrayToString(arr::Vector{Uint8})
+function _uint8ArrayToString(arr::Vector{UInt8})
   sMap = "[" * chop(mapreduce(x->x*",", *, map(x -> hex(x,2), arr))) * "]";
   return(sMap);
 end
