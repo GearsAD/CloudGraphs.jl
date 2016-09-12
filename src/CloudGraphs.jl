@@ -315,8 +315,8 @@ function neoNode2CloudVertex(cg::CloudGraph, neoNode::Neo4j.Node)
   recvOrigType = cg.packedPackedDataTypes[typePackedRegName].decodingFunction(packed);
 
   # Big data
-  bDS = JSON.parse(props["bigData"]);
-  #@show(bDS)
+  jsonBD = props["bigData"];
+  bDS = JSON.parse(jsonBD);
   # new addition of the timestamp.
   # TODO [GearsAD] : Remove this in the future as all nodes should have it.
   ts = haskey(bDS, "lastSavedTimestamp") ? bDS["lastSavedTimestamp"] : "[N/A]";
@@ -325,6 +325,7 @@ function neoNode2CloudVertex(cg::CloudGraph, neoNode::Neo4j.Node)
   if(haskey(bDS, "dataElements"))
     for bDE in bDS["dataElements"]
       elem = BigDataElement(bDE["description"], Vector{UInt8}(), bDE["mongoKey"])
+      push!(bigData.dataElements, elem);
     end
   end
   #bigData = BigData(bDS["isRetrieved"], bDS["isAvailable"], bDS["isExistingOnServer"],  0);
