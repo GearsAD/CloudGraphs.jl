@@ -76,7 +76,7 @@ vertex = Graphs.add_vertex!(localGraph, v);
 vertex.attributes["data"] = fullType;
 vertex.attributes["age"] = 64;
 vertex.attributes["latestEstimate"] = [0.0,0.0,0.0];
-bigData = CloudGraphs.BigData(true, true, false, rand(10, 10, 10));
+bigData = CloudGraphs.BigData();
 vertex.attributes["bigData"] = bigData;
 # Now encoding the structure to CloudGraphs vertex
 cloudVertex = CloudGraphs.exVertex2CloudVertex(vertex);
