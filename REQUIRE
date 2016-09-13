@@ -1,6 +1,6 @@
 julia 0.4
 Graphs
 Neo4j
-# Mongo
+Mongo
 ProtoBuf
 JSON
