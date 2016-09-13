@@ -42,11 +42,12 @@ type CloudVertex
   bigData::BigData
   neo4jNodeId::Int
   neo4jNode::Union{Void,Neo4j.Node}
+  labels::Vector{AbstractString}
   isValidNeoNodeId::Bool
   exVertexId::Int
   isValidExVertex::Bool
-  CloudVertex() = new(Union, Dict{UTF8String, Any}(), BigData(), -1, nothing, false, -1, false)
-  CloudVertex(packed, properties, bigData, neo4jNodeId, neo4jNode, isValidNeoNodeId, exVertexId, isValidExVertex) = new(packed, properties, bigData, neo4jNodeId, neo4jNode, isValidNeoNodeId, exVertexId, isValidExVertex)
+  CloudVertex() = new(Union, Dict{UTF8String, Any}(), BigData(), -1, nothing, Vector{AbstractString}(), false, -1, false)
+  CloudVertex(packed, properties, bigData, neo4jNodeId, neo4jNode, isValidNeoNodeId, exVertexId, isValidExVertex; labels::Vector{AbstractString}=Vector{AbstractString}()) = new(packed, properties, bigData, neo4jNodeId, neo4jNode, labels, isValidNeoNodeId, exVertexId, isValidExVertex)
 end
 
 # A single configuration type for a CloudGraph instance.
@@ -302,12 +303,11 @@ end
 
 function neoNode2CloudVertex(cg::CloudGraph, neoNode::Neo4j.Node)
   # Get the node properties.
-  props = neoNode.data; #Neo4j.getnodeproperties(neoNode);
+  props = neoNode.data;
 
   # Unpack the packed data using an interim UInt8[].
   pData = convert(Array{UInt8}, props["data"]);
   pB = PipeBuffer(pData);
-  # @show props["packedType"]
 
   typePackedRegName = props["packedType"];
 
@@ -328,7 +328,11 @@ function neoNode2CloudVertex(cg::CloudGraph, neoNode::Neo4j.Node)
       push!(bigData.dataElements, elem);
     end
   end
-  #bigData = BigData(bDS["isRetrieved"], bDS["isAvailable"], bDS["isExistingOnServer"],  0);
+
+  labels = convert(Vector{AbstractString}, Neo4j.getnodelabels(neoNode));
+  if(length(labels) == 0)
+    labels = Vector{AbstractString}();
+  end
 
   # Now delete these out the props leaving the rest as general properties
   delete!(props, "data");
@@ -338,7 +342,7 @@ function neoNode2CloudVertex(cg::CloudGraph, neoNode::Neo4j.Node)
   delete!(props, "exVertexId")
 
   # Build a CloudGraph node.
-  return CloudVertex(recvOrigType, props, bigData, neoNode.metadata["id"], neoNode, true, exvid, false);
+  return CloudVertex(recvOrigType, props, bigData, neoNode.metadata["id"], neoNode, true, exvid, false; labels=labels);
 end
 
 # --- Graphs.jl overloads ---
@@ -351,6 +355,11 @@ function add_vertex!(cg::CloudGraph, vertex::CloudVertex)
   try
     props = cloudVertex2NeoProps(cg, vertex)
     vertex.neo4jNode = Neo4j.createnode(cg.neo4j.graph, props);
+    #Set the labels
+    if(length(vertex.labels) > 0)
+      Neo4j.addnodelabels(vertex.neo4jNode, vertex.labels);
+    end
+    #Update the Neo4j info.
     vertex.neo4jNodeId = vertex.neo4jNode.id;
     vertex.isValidNeoNodeId = true
     # make sure original struct gets the new bits of data it should have -- rather show than hide?
@@ -375,7 +384,6 @@ end
 function get_vertex(cg::CloudGraph, neoNodeId::Int)
   try
     neoNode = Neo4j.getnode(cg.neo4j.graph, neoNodeId);
-
     return(neoNode2CloudVertex(cg, neoNode))
   catch e
     rethrow(e);
@@ -390,6 +398,9 @@ function update_vertex!(cg::CloudGraph, vertex::CloudVertex)
 
     props = cloudVertex2NeoProps(cg, vertex);
     Neo4j.updatenodeproperties(vertex.neo4jNode, props);
+
+    # Update the labels
+    Neo4j.updatenodelabels(vertex.neo4jNode, vertex.labels);
   catch e
     rethrow(e);
   end

@@ -110,8 +110,32 @@ cloudVertexRet = CloudGraphs.get_vertex(cloudGraph, cloudVertex.neo4jNode.id, fa
 @test json(cloudVertex.properties) == json(cloudVertexRet.properties);
 println("Success!")
 
+# Label testing
+println("[Test] Creating a vertex with labels...")
+cloudVertexWithLabels = deepcopy(cloudVertex);
+cloudVertexWithLabels.labels = ["LABEL1", "LABEL2"];
+CloudGraphs.add_vertex!(cloudGraph, cloudVertexWithLabels);
+println("Success!")
+println("[Test] Getting the vertex and checking labels exist...")
+cloudVertexWithLabelsRet = CloudGraphs.get_vertex(cloudGraph, cloudVertexWithLabels.neo4jNode.id, false)
+@test cloudVertexWithLabels.labels == cloudVertexWithLabelsRet.labels
+println("[Test] Adding a label...")
+push!(cloudVertexWithLabels.labels, "AnotherLabel")
+CloudGraphs.update_vertex!(cloudGraph, cloudVertexWithLabels);
+cloudVertexWithLabelsRet = CloudGraphs.get_vertex(cloudGraph, cloudVertexWithLabels.neo4jNode.id, false)
+@test cloudVertexWithLabels.labels == cloudVertexWithLabelsRet.labels
+println("Success!")
+# Now clear out all the labels
+println("[Test] Clearing all labels...")
+cloudVertexWithLabels.labels = Vector{AbstractString}()
+CloudGraphs.update_vertex!(cloudGraph, cloudVertexWithLabels);
+cloudVertexWithLabelsRet = CloudGraphs.get_vertex(cloudGraph, cloudVertexWithLabels.neo4jNode.id, false)
+@test cloudVertexWithLabels.labels == cloudVertexWithLabelsRet.labels
+println("Success!")
+
 print("[TEST] Deleting a CloudGraph vertex...")
 CloudGraphs.delete_vertex!(cloudGraph, cloudVertex);
+CloudGraphs.delete_vertex!(cloudGraph, cloudVertexWithLabels);
 println("Success!")
 
 print("[TEST] Negative testing for double deletions...")
@@ -211,7 +235,6 @@ neighs1out = CloudGraphs.get_neighbors(cloudGraph, cloudVert1, incoming=false, o
 @test neighs1in[1].neo4jNodeId == cloudVert3.neo4jNodeId
 @test neighs1out[1].neo4jNodeId == cloudVert2.neo4jNodeId
 println("Success!")
-
 
 print("[TEST] Deleting an edge...")
 CloudGraphs.delete_edge!(cloudGraph, edge12)
