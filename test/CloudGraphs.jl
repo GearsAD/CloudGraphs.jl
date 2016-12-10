@@ -14,7 +14,7 @@ println("Success!");
 # Testing type registration
 type DataTest
   matrix::Array{Float64, 2}
-  string::ASCIIString
+  string::AbstractString #ASCIIString
   boolmatrix::Array{Int32,2}
   DataTest() = new()
   DataTest(m,s,b) = new(m,s,b)
@@ -22,7 +22,7 @@ end
 type PackedDataTest
   vecmat::Vector{Float64}
   matrows::Int64
-  string::ASCIIString
+  string::AbstractString #ASCIIString
   boolvecmat::Array{Int32,1}
   boolmatrows::Int64
   PackedDataTest() = new()
@@ -164,7 +164,7 @@ CloudGraphs.add_vertex!(cloudGraph, cloudVert3);
 
 # Create an edge and add it to the graph.
 # Test props
-props = Dict{UTF8String, Any}(utf8("Test") => 8);
+props = Dict{AbstractString, Any}(string("Test") => 8); #UTF8String   utf8(..)
 edge12 = CloudGraphs.CloudEdge(cloudVert1, cloudVert2, "DEPENDENCE");
 CloudGraphs.add_edge!(cloudGraph, edge12);
 edge23 = CloudGraphs.CloudEdge(cloudVert2, cloudVert3, "DEPENDENCE");
