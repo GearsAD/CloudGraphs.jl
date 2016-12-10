@@ -271,8 +271,8 @@ function cloudVertex2NeoProps(cg::CloudGraph, vertex::CloudVertex)
   if(haskey(cg.packedOriginalDataTypes, string(typeof(vertex.packed)) ) ) # @GearsAD check, it was cg.convertTypes
 
     typeOriginalRegName = string(typeof(vertex.packed));
-    packedType = cg.packedOriginalDataTypes[typeOriginalRegName].encodingFunction(vertex.packed);
-
+    packingtypedef = cg.packedOriginalDataTypes[typeOriginalRegName].packingType
+    packedType = cg.packedOriginalDataTypes[typeOriginalRegName].encodingFunction(packingtypedef, vertex.packed);
     ProtoBuf.writeproto(pB, packedType); # vertex.packed
     typeKey = string(typeof(packedType));
   else
@@ -312,7 +312,8 @@ function neoNode2CloudVertex(cg::CloudGraph, neoNode::Neo4j.Node)
   typePackedRegName = props["packedType"];
 
   packed = readproto(pB, cg.packedPackedDataTypes[typePackedRegName].packingType() );
-  recvOrigType = cg.packedPackedDataTypes[typePackedRegName].decodingFunction(packed);
+  origtypedef = cg.packedPackedDataTypes[typePackedRegName].originalType
+  recvOrigType = cg.packedPackedDataTypes[typePackedRegName].decodingFunction(origtypedef, packed);
 
   # Big data
   jsonBD = props["bigData"];

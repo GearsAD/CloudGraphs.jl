@@ -7,7 +7,7 @@ using CloudGraphs;
 
 # Creating a connection
 print("[TEST] Connecting to the local CloudGraphs instance (Neo4j and Mongo)...");
-configuration = CloudGraphs.CloudGraphConfiguration("localhost", 7474, "", "", "localhost", 27017, false, "", "");
+configuration = CloudGraphs.CloudGraphConfiguration("localhost", 7474, "neo4j", "profroot", "localhost", 27017, false, "", "");
 cloudGraph = connect(configuration);
 println("Success!");
 
@@ -34,10 +34,10 @@ type PackedDataTest
                                   size(d.boolmatrix,1))
 end
 
-function encoder(d::DataTest)
+function encoder(::Type{PackedDataTest}, d::DataTest)
   return PackedDataTest(d)
 end
-function decoder(d::PackedDataTest)
+function decoder(T::Type{DataTest}, d::PackedDataTest)
   r1 = d.matrows
   c1 = floor(Int,length(d.vecmat)/r1)
   M1 = reshape(d.vecmat,r1,c1)
@@ -61,9 +61,9 @@ typePackedRegName = string(PackedDataTest);
 typeOriginalRegName = string(DataTest);
 # Now lets encode and decode to see.
 println("Encoding...")
-testPackedType = cloudGraph.packedOriginalDataTypes[typeOriginalRegName].encodingFunction(fullType);
+testPackedType = cloudGraph.packedOriginalDataTypes[typeOriginalRegName].encodingFunction(PackedDataTest, fullType);
 println("Decoding...")
-testFullType = cloudGraph.packedPackedDataTypes[typePackedRegName].decodingFunction(testPackedType);
+testFullType = cloudGraph.packedPackedDataTypes[typePackedRegName].decodingFunction(DataTest, testPackedType);
 @test json(testFullType) == json(fullType)
 println("Success!")
 
