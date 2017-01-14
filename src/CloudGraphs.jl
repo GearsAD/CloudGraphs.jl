@@ -33,12 +33,12 @@ type BigData
   dataElements::Vector{BigDataElement}
   # This is just for local use, and is not saved directly into the graph.
   BigData() = new(false, false, false, "[N/A]", Vector{BigDataElement}())
-  BigData(isRetrieved::Bool, isAvailable::Bool, isExistingOnServer::Bool, lastSavedTimestamp::AbstractString, data::Vector{BigDataElement}) = new(isRetrieved, isAvailable, isExistingOnServer, lastSavedTimestamp, data)
+  BigData{T <: AbstractString}(isRetrieved::Bool, isAvailable::Bool, isExistingOnServer::Bool, lastSavedTimestamp::T, data::Vector{BigDataElement}) = new(isRetrieved, isAvailable, isExistingOnServer, lastSavedTimestamp, data)
 end
 
 type CloudVertex
   packed::Any
-  properties::Dict{UTF8String, Any} #AbstractString
+  properties::Dict{AbstractString, Any} # UTF8String
   bigData::BigData
   neo4jNodeId::Int
   neo4jNode::Union{Void,Neo4j.Node}
@@ -47,20 +47,20 @@ type CloudVertex
   exVertexId::Int
   isValidExVertex::Bool
   CloudVertex() = new(Union, Dict{UTF8String, Any}(), BigData(), -1, nothing, Vector{AbstractString}(), false, -1, false)
-  CloudVertex(packed, properties, bigData, neo4jNodeId, neo4jNode, isValidNeoNodeId, exVertexId, isValidExVertex; labels::Vector{AbstractString}=Vector{AbstractString}()) = new(packed, properties, bigData, neo4jNodeId, neo4jNode, labels, isValidNeoNodeId, exVertexId, isValidExVertex)
+  CloudVertex{T <: AbstractString}(packed, properties, bigData, neo4jNodeId, neo4jNode, isValidNeoNodeId, exVertexId, isValidExVertex; labels::Vector{T}=Vector{String}()) = new(packed, properties, bigData, neo4jNodeId, neo4jNode, labels, isValidNeoNodeId, exVertexId, isValidExVertex)
 end
 
 # A single configuration type for a CloudGraph instance.
 type CloudGraphConfiguration
-  neo4jHost::UTF8String
+  neo4jHost::AbstractString # UTF8String
   neo4jPort::Int
-  neo4jUsername::UTF8String
-  neo4jPassword::UTF8String
-  mongoHost::UTF8String
+  neo4jUsername::AbstractString # UTF8String
+  neo4jPassword::AbstractString # UTF8String
+  mongoHost::AbstractString # UTF8String
   mongoPort::Int
   mongoIsUsingCredentials::Bool
-  mongoUsername::UTF8String
-  mongoPassword::UTF8String
+  mongoUsername::AbstractString # UTF8String
+  mongoPassword::AbstractString # UTF8String
 end
 
 type Neo4jInstance
@@ -94,15 +94,16 @@ end
 type CloudEdge
   neo4jEdgeId::Int
   neo4jEdge::Union{Void,Neo4j.Relationship}
-  edgeType::UTF8String
+  edgeType::AbstractString #UTF8String
   neo4jSourceVertexId::Int
   SourceVertex::Union{Void,CloudGraphs.CloudVertex}  #neo4jSourceVertex::Union{Void,Neo4j.Node}
   neo4jDestVertexId::Int
   DestVertex::Union{Void,CloudGraphs.CloudVertex}  #neo4jDestVertex::Union{Void,Neo4j.Node}
-  properties::Dict{UTF8String, Any} #AbstractString
-  CloudEdge() = new(-1, nothing, "", -1, nothing, -1, nothing, Dict{UTF8String, Any}())
-  CloudEdge(vertexSrc::CloudVertex, vertexDest::CloudVertex, edgeType::AbstractString; props::Dict{UTF8String, Any}=Dict{UTF8String, Any}()) = new(
-    -1, nothing, utf8(edgeType),
+  properties::Dict{AbstractString, Any} # UTF8String
+  CloudEdge{T <: AbstractString}() = new(-1, nothing, "", -1, nothing, -1, nothing, Dict{T, Any}()) # UTF8String
+  # UTF8String
+  CloudEdge{T <: AbstractString}(vertexSrc::CloudVertex, vertexDest::CloudVertex, edgeType::T; props::Dict{T, Any}=Dict{T, Any}()) = new(
+    -1, nothing, string(edgeType), # utf8(edgeType)
     vertexSrc.neo4jNodeId,
     vertexSrc, #.neo4jNode,
     vertexDest.neo4jNodeId,
@@ -271,8 +272,8 @@ function cloudVertex2NeoProps(cg::CloudGraph, vertex::CloudVertex)
   if(haskey(cg.packedOriginalDataTypes, string(typeof(vertex.packed)) ) ) # @GearsAD check, it was cg.convertTypes
 
     typeOriginalRegName = string(typeof(vertex.packed));
-    packedType = cg.packedOriginalDataTypes[typeOriginalRegName].encodingFunction(vertex.packed);
-
+    packingtypedef = cg.packedOriginalDataTypes[typeOriginalRegName].packingType
+    packedType = cg.packedOriginalDataTypes[typeOriginalRegName].encodingFunction(packingtypedef, vertex.packed);
     ProtoBuf.writeproto(pB, packedType); # vertex.packed
     typeKey = string(typeof(packedType));
   else
@@ -312,7 +313,8 @@ function neoNode2CloudVertex(cg::CloudGraph, neoNode::Neo4j.Node)
   typePackedRegName = props["packedType"];
 
   packed = readproto(pB, cg.packedPackedDataTypes[typePackedRegName].packingType() );
-  recvOrigType = cg.packedPackedDataTypes[typePackedRegName].decodingFunction(packed);
+  origtypedef = cg.packedPackedDataTypes[typePackedRegName].originalType
+  recvOrigType = cg.packedPackedDataTypes[typePackedRegName].decodingFunction(origtypedef, packed);
 
   # Big data
   jsonBD = props["bigData"];

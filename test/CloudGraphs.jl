@@ -14,7 +14,7 @@ println("Success!");
 # Testing type registration
 type DataTest
   matrix::Array{Float64, 2}
-  string::ASCIIString
+  string::AbstractString #ASCIIString
   boolmatrix::Array{Int32,2}
   DataTest() = new()
   DataTest(m,s,b) = new(m,s,b)
@@ -22,7 +22,7 @@ end
 type PackedDataTest
   vecmat::Vector{Float64}
   matrows::Int64
-  string::ASCIIString
+  string::AbstractString #ASCIIString
   boolvecmat::Array{Int32,1}
   boolmatrows::Int64
   PackedDataTest() = new()
@@ -34,10 +34,10 @@ type PackedDataTest
                                   size(d.boolmatrix,1))
 end
 
-function encoder(d::DataTest)
+function encoder(::Type{PackedDataTest}, d::DataTest)
   return PackedDataTest(d)
 end
-function decoder(d::PackedDataTest)
+function decoder(T::Type{DataTest}, d::PackedDataTest)
   r1 = d.matrows
   c1 = floor(Int,length(d.vecmat)/r1)
   M1 = reshape(d.vecmat,r1,c1)
@@ -61,9 +61,9 @@ typePackedRegName = string(PackedDataTest);
 typeOriginalRegName = string(DataTest);
 # Now lets encode and decode to see.
 println("Encoding...")
-testPackedType = cloudGraph.packedOriginalDataTypes[typeOriginalRegName].encodingFunction(fullType);
+testPackedType = cloudGraph.packedOriginalDataTypes[typeOriginalRegName].encodingFunction(PackedDataTest, fullType);
 println("Decoding...")
-testFullType = cloudGraph.packedPackedDataTypes[typePackedRegName].decodingFunction(testPackedType);
+testFullType = cloudGraph.packedPackedDataTypes[typePackedRegName].decodingFunction(DataTest, testPackedType);
 @test json(testFullType) == json(fullType)
 println("Success!")
 
@@ -164,7 +164,7 @@ CloudGraphs.add_vertex!(cloudGraph, cloudVert3);
 
 # Create an edge and add it to the graph.
 # Test props
-props = Dict{UTF8String, Any}(utf8("Test") => 8);
+props = Dict{AbstractString, Any}(string("Test") => 8); #UTF8String   utf8(..)
 edge12 = CloudGraphs.CloudEdge(cloudVert1, cloudVert2, "DEPENDENCE");
 CloudGraphs.add_edge!(cloudGraph, edge12);
 edge23 = CloudGraphs.CloudEdge(cloudVert2, cloudVert3, "DEPENDENCE");
