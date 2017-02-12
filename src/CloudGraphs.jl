@@ -1,11 +1,15 @@
 module CloudGraphs
 
+import Graphs: add_edge!, add_vertex!
+
 using Graphs;
 using Neo4j;
 using Mongo;
 using LibBSON;
 using ProtoBuf;
 using JSON;
+
+# extending methods
 
 #Types
 export CloudGraphConfiguration, CloudGraph, CloudVertex, CloudEdge, BigData, BigDataElement
@@ -100,7 +104,7 @@ type CloudEdge
   neo4jDestVertexId::Int
   DestVertex::Union{Void,CloudGraphs.CloudVertex}  #neo4jDestVertex::Union{Void,Neo4j.Node}
   properties::Dict{AbstractString, Any} # UTF8String
-  CloudEdge{T <: AbstractString}() = new(-1, nothing, "", -1, nothing, -1, nothing, Dict{T, Any}()) # UTF8String
+  CloudEdge() = new(-1, nothing, "", -1, nothing, -1, nothing, Dict{AbstractString, Any}())
   # UTF8String
   CloudEdge{T <: AbstractString}(vertexSrc::CloudVertex, vertexDest::CloudVertex, edgeType::T; props::Dict{T, Any}=Dict{T, Any}()) = new(
     -1, nothing, string(edgeType), # utf8(edgeType)
