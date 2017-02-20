@@ -1,11 +1,15 @@
 module CloudGraphs
 
+import Graphs: add_edge!, add_vertex!
+
 using Graphs;
 using Neo4j;
 using Mongo;
 using LibBSON;
 using ProtoBuf;
 using JSON;
+
+# extending methods
 
 #Types
 export CloudGraphConfiguration, CloudGraph, CloudVertex, CloudEdge, BigData, BigDataElement
@@ -100,7 +104,7 @@ type CloudEdge
   neo4jDestVertexId::Int
   DestVertex::Union{Void,CloudGraphs.CloudVertex}  #neo4jDestVertex::Union{Void,Neo4j.Node}
   properties::Dict{AbstractString, Any} # UTF8String
-  CloudEdge{T <: AbstractString}() = new(-1, nothing, "", -1, nothing, -1, nothing, Dict{T, Any}()) # UTF8String
+  CloudEdge() = new(-1, nothing, "", -1, nothing, -1, nothing, Dict{AbstractString, Any}())
   # UTF8String
   CloudEdge{T <: AbstractString}(vertexSrc::CloudVertex, vertexDest::CloudVertex, edgeType::T; props::Dict{T, Any}=Dict{T, Any}()) = new(
     -1, nothing, string(edgeType), # utf8(edgeType)
@@ -307,6 +311,9 @@ function neoNode2CloudVertex(cg::CloudGraph, neoNode::Neo4j.Node)
   props = neoNode.data;
 
   # Unpack the packed data using an interim UInt8[].
+  if !haskey(props, "data")
+    error("dont have data field in neoNode id=$(neoNode.id)")
+  end
   pData = convert(Array{UInt8}, props["data"]);
   pB = PipeBuffer(pData);
 
@@ -501,7 +508,7 @@ function delete_edge!(cg::CloudGraph, edge::CloudEdge)
   nothing;
 end
 
-function get_neighbors(cg::CloudGraph, vert::CloudVertex; incoming::Bool=true, outgoing::Bool=true)
+function get_neighbors(cg::CloudGraph, vert::CloudVertex; incoming::Bool=true, outgoing::Bool=true, needdata::Bool=false)
   if(vert.neo4jNode == nothing)
     error("The provided vertex does not have it's associated Neo4j Node (vertex.neo4jNode) - please perform a get_vertex to get the complete structure first.")
   end
@@ -510,6 +517,10 @@ function get_neighbors(cg::CloudGraph, vert::CloudVertex; incoming::Bool=true, o
 
   neighbors = CloudVertex[]
   for neoNeighbor in neo4jNeighbors
+    if !haskey(neoNeighbor.data, "data") && needdata
+      warn("skip neighbor if not in the subgraph segment of interest, neonodeid=$(neoNeighbor.id)")
+      continue;
+    end
     push!(neighbors, neoNode2CloudVertex(cg, neoNeighbor))
   end
   return(neighbors)
