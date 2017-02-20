@@ -508,7 +508,7 @@ function delete_edge!(cg::CloudGraph, edge::CloudEdge)
   nothing;
 end
 
-function get_neighbors(cg::CloudGraph, vert::CloudVertex; incoming::Bool=true, outgoing::Bool=true)
+function get_neighbors(cg::CloudGraph, vert::CloudVertex; incoming::Bool=true, outgoing::Bool=true, needdata::Bool=false)
   if(vert.neo4jNode == nothing)
     error("The provided vertex does not have it's associated Neo4j Node (vertex.neo4jNode) - please perform a get_vertex to get the complete structure first.")
   end
@@ -517,6 +517,10 @@ function get_neighbors(cg::CloudGraph, vert::CloudVertex; incoming::Bool=true, o
 
   neighbors = CloudVertex[]
   for neoNeighbor in neo4jNeighbors
+    if !haskey(neoNeighbor.data, "data") && needdata
+      warn("skip neighbor if not in the subgraph segment of interest, neonodeid=$(neoNeighbor.id)")
+      continue;
+    end
     push!(neighbors, neoNode2CloudVertex(cg, neoNeighbor))
   end
   return(neighbors)
