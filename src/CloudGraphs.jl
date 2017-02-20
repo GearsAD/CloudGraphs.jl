@@ -311,6 +311,9 @@ function neoNode2CloudVertex(cg::CloudGraph, neoNode::Neo4j.Node)
   props = neoNode.data;
 
   # Unpack the packed data using an interim UInt8[].
+  if !haskey(props, "data")
+    error("dont have data field in neoNode id=$(neoNode.id)")
+  end
   pData = convert(Array{UInt8}, props["data"]);
   pB = PipeBuffer(pData);
 
