@@ -50,7 +50,7 @@ type CloudVertex
   isValidNeoNodeId::Bool
   exVertexId::Int
   isValidExVertex::Bool
-  CloudVertex() = new(Union, Dict{UTF8String, Any}(), BigData(), -1, nothing, Vector{AbstractString}(), false, -1, false)
+  CloudVertex() = new(Union, Dict{AbstractString, Any}(), BigData(), -1, nothing, Vector{AbstractString}(), false, -1, false)
   CloudVertex{T <: AbstractString}(packed, properties, bigData, neo4jNodeId, neo4jNode, isValidNeoNodeId, exVertexId, isValidExVertex; labels::Vector{T}=Vector{String}()) = new(packed, properties, bigData, neo4jNodeId, neo4jNode, labels, isValidNeoNodeId, exVertexId, isValidExVertex)
 end
 
