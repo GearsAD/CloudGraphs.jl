@@ -280,7 +280,7 @@ function cloudVertex2NeoProps(cg::CloudGraph, vertex::CloudVertex)
     ProtoBuf.writeproto(pB, packedType); # vertex.packed
     typeKey = string(typeof(packedType));
   else
-    error("CloudGraphs doesn't know how to convert $(typeof(vertex.packed))")
+    error("CloudGraphs doesn't know how to convert packedOriginalDataTypes $(typeof(vertex.packed))")
   end
   props["data"] = pB.data;
   props["packedType"] = typeKey;
