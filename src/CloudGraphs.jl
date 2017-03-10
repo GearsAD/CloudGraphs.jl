@@ -274,13 +274,13 @@ function cloudVertex2NeoProps(cg::CloudGraph, vertex::CloudVertex)
   # @show string(typeof(vertex.packed))
   # @show keys(cg.packedOriginalDataTypes)
   if(haskey(cg.packedOriginalDataTypes, string(typeof(vertex.packed)) ) ) # @GearsAD check, it was cg.convertTypes
-
     typeOriginalRegName = string(typeof(vertex.packed));
     packingtypedef = cg.packedOriginalDataTypes[typeOriginalRegName].packingType
     packedType = cg.packedOriginalDataTypes[typeOriginalRegName].encodingFunction(packingtypedef, vertex.packed);
     ProtoBuf.writeproto(pB, packedType); # vertex.packed
     typeKey = string(typeof(packedType));
   else
+    error("CloudGraphs doesn't know how to convert $(typeof(vertex.packed))")
   end
   props["data"] = pB.data;
   props["packedType"] = typeKey;
