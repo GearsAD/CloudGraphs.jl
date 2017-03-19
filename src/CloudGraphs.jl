@@ -124,7 +124,7 @@ function connect(configuration::CloudGraphConfiguration)
   neoConn = Neo4j.Connection(configuration.neo4jHost, port=configuration.neo4jPort, user=configuration.neo4jUsername, password=configuration.neo4jPassword);
   neo4j = Neo4jInstance(neoConn, Neo4j.getgraph(neoConn));
 
-  mongoClient = configuration.mongoIsUsingCredentials ? Mongo.MongoClient(configuration.mongoHost, configuration.mongoPort) : Mongo.MongoClient(configuration.mongoHost, configuration.mongoPort, configuration.mongoUsername, configuration.mongoPassword)
+  mongoClient = configuration.mongoIsUsingCredentials ? Mongo.MongoClient(configuration.mongoHost, configuration.mongoPort, configuration.mongoUsername, configuration.mongoPassword) : Mongo.MongoClient(configuration.mongoHost, configuration.mongoPort)
   cgBindataCollection = Mongo.MongoCollection(mongoClient, "CloudGraphs", "bindata");
   mongoInstance = MongoDbInstance(mongoClient, cgBindataCollection);
 
