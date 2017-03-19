@@ -24,9 +24,12 @@ export registerPackedType!
 type BigDataElement
   description:: AbstractString
   data:: Vector{UInt8}
-  mongoKey:: AbstractString
-  BigDataElement(desc::AbstractString, data::Vector{UInt8}) = new(desc, data, "")
-  BigDataElement(desc::AbstractString, data::Vector{UInt8}, mongoKey::AbstractString) = new(desc, data, mongoKey)
+  mongoKey::AbstractString
+  neoNodeId::Int
+  lastSavedTimestamp::AbstractString #UTC DateTime.
+  BigDataElement(desc::AbstractString, data::Vector{UInt8}) = new(desc, data, "", -1, string(now(Dates.UTC)))
+  BigDataElement(desc::AbstractString, data::Vector{UInt8}, mongoKey::AbstractString) = new(desc, data, mongoKey, -1, string(now(Dates.UTC)))
+  BigDataElement(desc::AbstractString, data::Vector{UInt8}, mongoKey::AbstractString, neoNodeId::Int, lastSavedTimestamp::AbstractString) = new(desc, data, mongoKey, neoNodeId, lastSavedTimestamp)
 end
 
 type BigData
@@ -201,6 +204,8 @@ end
 
 function _saveBigDataElement!(cg::CloudGraph, vertex::CloudVertex, bDE::BigDataElement)
   stringArray = _uint8ArrayToString(bDE.data);
+  saveTime = string(Dates.now(Dates.UTC));
+
   #Check if the key exists...
   isNew = true;
   if(bDE.mongoKey != "")
@@ -209,20 +214,20 @@ function _saveBigDataElement!(cg::CloudGraph, vertex::CloudVertex, bDE::BigDataE
   end
   if(isNew)
     # Insert the node
-    m_oid = insert(cg.mongo.cgBindataCollection, ("neoNodeId" => vertex.neo4jNodeId, "val" => stringArray, "description" => bDE.description))
+    m_oid = insert(cg.mongo.cgBindataCollection, ("neoNodeId" => vertex.neo4jNodeId, "val" => stringArray, "description" => bDE.description, "lastSavedTimestamp" => saveTime))
     @show "Inserted big data to mongo id = $(m_oid)"
     #Update local instance
     bDE.mongoKey = string(m_oid);
   else
     # Update the node
-    m_oid = update(cg.mongo.cgBindataCollection, ("_id" => BSONOID(bDE.mongoKey)), set("neoNodeId" => vertex.neo4jNodeId, "val" => stringArray, "description" => bDE.description))
+    m_oid = update(cg.mongo.cgBindataCollection, ("_id" => BSONOID(bDE.mongoKey)), set("neoNodeId" => vertex.neo4jNodeId, "val" => stringArray, "description" => bDE.description, "lastSavedTimestamp" => saveTime))
     @show "Updated big data to mongo id (result=$(m_oid)) (key $(bDE.mongoKey))"
   end
 end
 
 function save_BigData!(cg::CloudGraph, vertex::CloudVertex)
   #Write to Mongo
-  for(bDE in vertex.bigData.dataElements)
+  for bDE in vertex.bigData.dataElements
     _saveBigDataElement!(cg, vertex, bDE);
   end
 
@@ -261,6 +266,7 @@ function read_BigData!(cg::CloudGraph, vertex::CloudVertex)
     results = first(find(cg.mongo.cgBindataCollection, ("_id" => eq(mongoId))));
     #Have it, now parse it until we have a native binary datatype.
     bDE.data = _stringToUint8Array(results["val"]);
+    bDE.lastSavedTimestamp = results["lastSavedTimestamp"];
   end
   return(vertex.bigData)
 end
@@ -274,7 +280,6 @@ function cloudVertex2NeoProps(cg::CloudGraph, vertex::CloudVertex)
   # @show string(typeof(vertex.packed))
   # @show keys(cg.packedOriginalDataTypes)
   if(haskey(cg.packedOriginalDataTypes, string(typeof(vertex.packed)) ) ) # @GearsAD check, it was cg.convertTypes
-
     typeOriginalRegName = string(typeof(vertex.packed));
     packingtypedef = cg.packedOriginalDataTypes[typeOriginalRegName].packingType
     packedType = cg.packedOriginalDataTypes[typeOriginalRegName].encodingFunction(packingtypedef, vertex.packed);
@@ -330,10 +335,10 @@ function neoNode2CloudVertex(cg::CloudGraph, neoNode::Neo4j.Node)
   # TODO [GearsAD] : Remove this in the future as all nodes should have it.
   ts = haskey(bDS, "lastSavedTimestamp") ? bDS["lastSavedTimestamp"] : "[N/A]";
   bigData = BigData(bDS["isRetrieved"], bDS["isAvailable"], bDS["isExistingOnServer"], ts, Vector{BigDataElement}());
-  # TODO: Remove the haskey again in the future once all nodes are up to date.
+  # TODO [GearsAD]: Remove the haskey again in the future once all nodes are up to date.
   if(haskey(bDS, "dataElements"))
     for bDE in bDS["dataElements"]
-      elem = BigDataElement(bDE["description"], Vector{UInt8}(), bDE["mongoKey"])
+      elem = BigDataElement(bDE["description"], Vector{UInt8}(), bDE["mongoKey"], neoNode.id, ts);
       push!(bigData.dataElements, elem);
     end
   end
@@ -364,13 +369,15 @@ function add_vertex!(cg::CloudGraph, vertex::CloudVertex)
   try
     props = cloudVertex2NeoProps(cg, vertex)
     vertex.neo4jNode = Neo4j.createnode(cg.neo4j.graph, props);
-    #Set the labels
+    # Set the labels
     if(length(vertex.labels) > 0)
       Neo4j.addnodelabels(vertex.neo4jNode, vertex.labels);
     end
-    #Update the Neo4j info.
+    # Update the Neo4j info.
     vertex.neo4jNodeId = vertex.neo4jNode.id;
-    vertex.isValidNeoNodeId = true
+    vertex.isValidNeoNodeId = true;
+    # Save this bigData
+    save_BigData!(cg, vertex);
     # make sure original struct gets the new bits of data it should have -- rather show than hide?
     # for ky in ["data"; "packedType"]  vertex.properties[ky] = props[ky] end
     return vertex.neo4jNode;
@@ -414,8 +421,6 @@ function update_vertex!(cg::CloudGraph, vertex::CloudVertex)
     rethrow(e);
   end
 end
-
-
 
 function delete_vertex!(cg::CloudGraph, vertex::CloudVertex)
   if(vertex.neo4jNode == nothing)
