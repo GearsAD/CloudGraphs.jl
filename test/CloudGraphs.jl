@@ -1,5 +1,5 @@
 # Setup everything using the common setup.
-import("CloudGraphSetup.jl")
+include("CloudGraphSetup.jl")
 
 # And check that if we encode and decode this type, it's exactly the same.
 # Make a packed data test structure.
