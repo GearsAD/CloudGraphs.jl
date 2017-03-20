@@ -24,6 +24,8 @@ vertex.attributes["data"] = fullType;
 vertex.attributes["age"] = 64;
 vertex.attributes["latestEstimate"] = [0.0,0.0,0.0];
 bigData = CloudGraphs.BigData();
+testElement = CloudGraphs.BigDataElement("Performance test dataset.", rand(UInt8,100)); #Data element
+append!(bigData.dataElements, [testElement]);
 vertex.attributes["bigData"] = bigData;
 # Now encoding the structure to CloudGraphs vertex
 cloudVertex = CloudGraphs.exVertex2CloudVertex(vertex);
@@ -44,6 +46,12 @@ cloudVertexRet = CloudGraphs.get_vertex(cloudGraph, cloudVertex.neo4jNode.id, fa
 @test json(cloudVertex.properties) == json(cloudVertexRet.properties)
 @test cloudVertex.neo4jNodeId == cloudVertexRet.neo4jNodeId
 @test cloudVertexRet.neo4jNode != Void
+println("Success!")
+
+print("[TEST] Checking the big data is persisted...")
+cloudVertexRet = CloudGraphs.get_vertex(cloudGraph, cloudVertex.neo4jNode.id, true) # fullType not required
+@test length(cloudVertexRet.bigData.dataElements) == 1
+@test cloudVertexRet.bigData.dataElements[1].data == cloudVertex.bigData.dataElements[1].data
 println("Success!")
 
 print("[TEST] Testing the update method...")
