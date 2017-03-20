@@ -22,8 +22,8 @@ export cloudVertex2ExVertex, exVertex2CloudVertex
 export registerPackedType!
 
 type BigDataElement
-  description:: AbstractString
-  data:: Vector{UInt8}
+  description::AbstractString
+  data::Vector{UInt8}
   mongoKey::AbstractString
   neoNodeId::Int
   lastSavedTimestamp::AbstractString #UTC DateTime.
@@ -183,27 +183,7 @@ end
 
 # --- Internal utility methods ---
 
-# Until we can do Bindata.
-function _uint8ArrayToString(arr::Vector{UInt8})
-  sMap = "[" * chop(mapreduce(x->x*",", *, map(x -> hex(x,2), arr))) * "]";
-  return(sMap);
-end
-
-# Until we can do Bindata.
-function _stringToUint8Array(packedString::AbstractString)
-  ss = split(packedString[2:end-1],',')
-  # @show(ss)
-  aa = Vector{UInt8}(length(ss))
-  @inbounds @simd for i in 1:length(aa)
-    #TODO: Possible optimization here by doing multiple elements at once.
-    # @show(ss[i])
-    aa[i]=hex2bytes(ss[i])[1]
-  end
-  return(aa)
-end
-
 function _saveBigDataElement!(cg::CloudGraph, vertex::CloudVertex, bDE::BigDataElement)
-  stringArray = _uint8ArrayToString(bDE.data);
   saveTime = string(Dates.now(Dates.UTC));
 
   #Check if the key exists...
@@ -214,13 +194,13 @@ function _saveBigDataElement!(cg::CloudGraph, vertex::CloudVertex, bDE::BigDataE
   end
   if(isNew)
     # Insert the node
-    m_oid = insert(cg.mongo.cgBindataCollection, ("neoNodeId" => vertex.neo4jNodeId, "val" => stringArray, "description" => bDE.description, "lastSavedTimestamp" => saveTime))
+    m_oid = insert(cg.mongo.cgBindataCollection, ("neoNodeId" => vertex.neo4jNodeId, "val" => bDE.data, "description" => bDE.description, "lastSavedTimestamp" => saveTime))
     @show "Inserted big data to mongo id = $(m_oid)"
     #Update local instance
     bDE.mongoKey = string(m_oid);
   else
     # Update the node
-    m_oid = update(cg.mongo.cgBindataCollection, ("_id" => BSONOID(bDE.mongoKey)), set("neoNodeId" => vertex.neo4jNodeId, "val" => stringArray, "description" => bDE.description, "lastSavedTimestamp" => saveTime))
+    m_oid = update(cg.mongo.cgBindataCollection, ("_id" => BSONOID(bDE.mongoKey)), set("neoNodeId" => vertex.neo4jNodeId, "val" => bDE.data, "description" => bDE.description, "lastSavedTimestamp" => saveTime))
     @show "Updated big data to mongo id (result=$(m_oid)) (key $(bDE.mongoKey))"
   end
 end
@@ -265,7 +245,7 @@ function read_BigData!(cg::CloudGraph, vertex::CloudVertex)
     end
     results = first(find(cg.mongo.cgBindataCollection, ("_id" => eq(mongoId))));
     #Have it, now parse it until we have a native binary datatype.
-    bDE.data = _stringToUint8Array(results["val"]);
+    bDE.data = results["val"];
     bDE.lastSavedTimestamp = results["lastSavedTimestamp"];
   end
   return(vertex.bigData)
