@@ -1,0 +1,17 @@
+language: julia
+os:
+  - linux
+julia:
+  - 0.5
+  - nightly
+notifications:
+  email: false
+matrix:
+  allow_failures:
+    - julia: nightly
+script:
+  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
+  - julia --check-bounds=yes -e 'Pkg.clone(pwd()); Pkg.test("CloudGraphs"; coverage=true)'
+
+after_success:
+  - julia -e 'cd(Pkg.dir("CloudGraphs")); Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'
