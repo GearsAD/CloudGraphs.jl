@@ -3,8 +3,8 @@
 # CloudGraphs.jl
 
 [![Build Status][build-img]][build-url]
-[![CloudGraphs](cg-v0.5)
-[![CloudGraphs](cg-v0.6)
+[![CloudGraphs](cg-badge-v0.5)](cg-pkg-v0.5)
+[![CloudGraphs](cg-badge-v0.6)](cg-pkg-v0.6)
 
 Repo for the CloudGraphs project, ongoing project on http://semisortedblog.wordpress.com, check it out! :)
 
@@ -37,5 +37,7 @@ This package is extensively used by the [Caesar.jl](http://www.github.com/dehann
 [build-img]: https://travis-ci.org/dehann/CloudGraphs.jl.svg?branch=master
 [build-url]: https://travis-ci.org/dehann/CloudGraphs.jl
 
-[cg-v0.5]: http://pkg.julialang.org/badges/CloudGraphs_0.5.svg)](http://pkg.julialang.org/?pkg=CloudGraphs&ver=0.5
-[cg-v0.6]: http://pkg.julialang.org/badges/CloudGraphs_0.6.svg)](http://pkg.julialang.org/?pkg=CloudGraphs&ver=0.6
+[cg-badge-v0.5]: http://pkg.julialang.org/badges/CloudGraphs_0.5.svg
+[cg-pkg-v0.5]: http://pkg.julialang.org/?pkg=CloudGraphs&ver=0.5
+[cg-badge-v0.6]: http://pkg.julialang.org/badges/CloudGraphs_0.6.svg
+[cg-pkg-v0.6]: http://pkg.julialang.org/?pkg=CloudGraphs&ver=0.6
