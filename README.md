@@ -32,10 +32,10 @@ This package is extensively used by the [Caesar.jl](http://www.github.com/dehann
          Singapore, 2017.
 
 
-[cov-img]: https://codecov.io/github/dehann/CloudGraphs.jl/coverage.svg?branch=master
-[cov-url]: https://codecov.io/github/dehann/CloudGraphs.jl?branch=master
-[build-img]: https://travis-ci.org/dehann/CloudGraphs.jl.svg?branch=master
-[build-url]: https://travis-ci.org/dehann/CloudGraphs.jl
+[cov-img]: https://codecov.io/github/GearsAD/CloudGraphs.jl/coverage.svg?branch=master
+[cov-url]: https://codecov.io/github/GearsAD/CloudGraphs.jl?branch=master
+[build-img]: https://travis-ci.org/GearsAD/CloudGraphs.jl.svg?branch=master
+[build-url]: https://travis-ci.org/GearsAD/CloudGraphs.jl
 
 [cg-badge-v0.5]: http://pkg.julialang.org/badges/CloudGraphs_0.5.svg
 [cg-pkg-v0.5]: http://pkg.julialang.org/?pkg=CloudGraphs&ver=0.5
