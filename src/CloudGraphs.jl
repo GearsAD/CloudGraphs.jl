@@ -271,7 +271,7 @@ function read_BigData!(cg::CloudGraph, vertex::CloudVertex)
     results = first(find(cg.mongo.cgBindataCollection, ("_id" => eq(mongoId))));
     #Have it, now parse it until we have a native binary datatype.
     bDE.data = results["val"];
-    bDE.lastSavedTimestamp = results["lastSavedTimestamp"];
+    # bDE.lastSavedTimestamp = results["lastSavedTimestamp"]; # TODO -- does not work
   end
   return(vertex.bigData)
 end
@@ -337,7 +337,7 @@ function neoNode2CloudVertex(cg::CloudGraph, neoNode::Neo4j.Node)
   # Get the node properties.
   recvOrigType = unpackNeoNodeData2UsrType(cg, neoNode)
   props = neoNode.data;
-  
+
   # Big data
   jsonBD = props["bigData"];
   bDS = JSON.parse(jsonBD);
