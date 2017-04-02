@@ -406,7 +406,7 @@ function get_vertex(cg::CloudGraph, neoNodeId::Int, retrieveBigData::Bool)
     try
       read_BigData!(cg, cgVertex);
     catch ex
-      if(isa(ErrorException, ex))
+      if(isa(ex, ErrorException))
         warning("Unable to retrieve bigData for node $(neoNodeId) - $(ex)")
       end
     end
