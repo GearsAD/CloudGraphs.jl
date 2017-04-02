@@ -272,7 +272,6 @@ function read_BigData!(cg::CloudGraph, vertex::CloudVertex)
     results = first(find(cg.mongo.cgBindataCollection, ("_id" => eq(mongoId))));
     #Have it, now parse it until we have a native binary datatype.
     bDE.data = results["val"];
-    # bDE.lastSavedTimestamp = results["lastSavedTimestamp"]; # TODO -- does not work
   end
   return(vertex.bigData)
 end
@@ -281,20 +280,17 @@ function delete_BigData!(cg::CloudGraph, vertex::CloudVertex)
   if(vertex.bigData.isExistingOnServer == false)
     error("The data does not exist on the server. 'isExistingOnServer' is false. Have you saved with set_BigData!()");
   end
+  # Update structure now so if it fails midway and we save again it still writes a new set of keys.
+  vertex.bigData.isExistingOnServer = false
+  # Delete the data.
   for bDE in vertex.bigData.dataElements
     mongoId = BSONOID(bDE.mongoKey);
     numNodes = count(cg.mongo.cgBindataCollection, ("_id" => eq(mongoId)));
     info("delete_BigData! - The query for $(mongoId) returned $(numNodes) value(s).");
-    if(numNodes >0 )
-      # TODO WIP
-      results = first(find(cg.mongo.cgBindataCollection, ("_id" => eq(mongoId))));
-      #Have it, now parse it until we have a native binary datatype.
-      bDE.data = results["val"];
-      # bDE.lastSavedTimestamp = results["lastSavedTimestamp"]; # TODO -- does not work
+    if(numNodes > 0)
+      delete(cg.mongo.cgBindataCollection, ("_id" => eq(mongoId)));
     end
   end
-  # Update structure.
-  vertex.bigData.isExistingOnServer = false
 end
 
 function cloudVertex2NeoProps(cg::CloudGraph, vertex::CloudVertex)
@@ -427,7 +423,7 @@ function get_vertex(cg::CloudGraph, neoNodeId::Int, retrieveBigData::Bool)
       read_BigData!(cg, cgVertex);
     catch ex
       if(isa(ex, ErrorException))
-        warn("Unable to retrieve bigData for node $(neoNodeId) - $(ex)")
+        warn("Unable to retrieve bigData for node $(neoNodeId).")
       end
     end
   end
@@ -465,7 +461,13 @@ function delete_vertex!(cg::CloudGraph, vertex::CloudVertex)
     error("There isn't a Neo4j Node associated with this CloudVertex.");
   end
 
-  warn("Still need to add the Mongo deletion to the call here...");
+  try
+    delete_BigData(cg, vertex)
+  catch ex
+    if(isa(ex, ErrorException))
+      warn("Unable to completely delete bigData for node $(neoNodeId) - $(ex)")
+    end
+  end
 
   Neo4j.deletenode(vertex.neo4jNode);
 
