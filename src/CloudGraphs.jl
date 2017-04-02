@@ -277,6 +277,26 @@ function read_BigData!(cg::CloudGraph, vertex::CloudVertex)
   return(vertex.bigData)
 end
 
+function delete_BigData!(cg::CloudGraph, vertex::CloudVertex)
+  if(vertex.bigData.isExistingOnServer == false)
+    error("The data does not exist on the server. 'isExistingOnServer' is false. Have you saved with set_BigData!()");
+  end
+  for bDE in vertex.bigData.dataElements
+    mongoId = BSONOID(bDE.mongoKey);
+    numNodes = count(cg.mongo.cgBindataCollection, ("_id" => eq(mongoId)));
+    info("delete_BigData! - The query for $(mongoId) returned $(numNodes) value(s).");
+    if(numNodes >0 )
+      # TODO WIP
+      results = first(find(cg.mongo.cgBindataCollection, ("_id" => eq(mongoId))));
+      #Have it, now parse it until we have a native binary datatype.
+      bDE.data = results["val"];
+      # bDE.lastSavedTimestamp = results["lastSavedTimestamp"]; # TODO -- does not work
+    end
+  end
+  # Update structure.
+  vertex.bigData.isExistingOnServer = false
+end
+
 function cloudVertex2NeoProps(cg::CloudGraph, vertex::CloudVertex)
   props = deepcopy(vertex.properties);
   # Packed information
@@ -407,7 +427,7 @@ function get_vertex(cg::CloudGraph, neoNodeId::Int, retrieveBigData::Bool)
       read_BigData!(cg, cgVertex);
     catch ex
       if(isa(ex, ErrorException))
-        warning("Unable to retrieve bigData for node $(neoNodeId) - $(ex)")
+        warn("Unable to retrieve bigData for node $(neoNodeId) - $(ex)")
       end
     end
   end
