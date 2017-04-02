@@ -264,9 +264,10 @@ function read_BigData!(cg::CloudGraph, vertex::CloudVertex)
   end
   for bDE in vertex.bigData.dataElements
     mongoId = BSONOID(bDE.mongoKey);
-    numNodes = count(cg.mongo.cgBindataCollection, ("_id" => mongoId));
+    numNodes = count(cg.mongo.cgBindataCollection, ("_id" => eq(mongoId)));
+    info("read_BigData! - The query for $(mongoId) returned $(numNodes) values.");
     if(numNodes != 1)
-      error("The query for $(mongoId) returned $(numNodes) values, expected a 1-to-1 mapping!");
+      error("The query for $(mongoId) returned $(numNodes) values, expected 1 result for this element!");
     end
     results = first(find(cg.mongo.cgBindataCollection, ("_id" => eq(mongoId))));
     #Have it, now parse it until we have a native binary datatype.
@@ -402,7 +403,13 @@ end
 function get_vertex(cg::CloudGraph, neoNodeId::Int, retrieveBigData::Bool)
   cgVertex = get_vertex(cg, neoNodeId)
   if(retrieveBigData && cgVertex.bigData.isExistingOnServer)
-    read_BigData!(cg, cgVertex);
+    try
+      read_BigData!(cg, cgVertex);
+    catch ex
+      if(isa, ErrorException)
+        warning("Unable to retrieve bigData for node $(neoNodeId) - $(ex)")
+      end
+    end
   end
   return(cgVertex)
 end
