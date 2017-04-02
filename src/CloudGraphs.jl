@@ -16,10 +16,10 @@ export CloudGraphConfiguration, CloudGraph, CloudVertex, CloudEdge, BigData, Big
 #Functions
 export connect, disconnect, add_vertex!, get_vertex, update_vertex!, delete_vertex!
 export add_edge!, delete_edge!, get_edge
-export save_BigData!, read_BigData
+export save_BigData!, read_BigData, update_NeoBigData!
 export get_neighbors
 export cloudVertex2ExVertex, exVertex2CloudVertex
-export registerPackedType!
+export registerPackedType!, unpackNeoNodeData2UsrType
 
 type BigDataElement
   description::AbstractString
@@ -30,6 +30,7 @@ type BigDataElement
   BigDataElement(desc::AbstractString, data::Vector{UInt8}) = new(desc, data, "", -1, string(now(Dates.UTC)))
   BigDataElement(desc::AbstractString, data::Vector{UInt8}, mongoKey::AbstractString) = new(desc, data, mongoKey, -1, string(now(Dates.UTC)))
   BigDataElement(desc::AbstractString, data::Vector{UInt8}, mongoKey::AbstractString, neoNodeId::Int, lastSavedTimestamp::AbstractString) = new(desc, data, mongoKey, neoNodeId, lastSavedTimestamp)
+  BigDataElement{T <: AbstractString}(dd::Dict{T,Any}) = new(dd["description"], dd["data"], dd["mongoKey"], dd["neoNodeId"], dd["lastSavedTimestamp"])
 end
 
 type BigData
@@ -40,7 +41,15 @@ type BigData
   dataElements::Vector{BigDataElement}
   # This is just for local use, and is not saved directly into the graph.
   BigData() = new(false, false, false, "[N/A]", Vector{BigDataElement}())
-  BigData{T <: AbstractString}(isRetrieved::Bool, isAvailable::Bool, isExistingOnServer::Bool, lastSavedTimestamp::T, data::Vector{BigDataElement}) = new(isRetrieved, isAvailable, isExistingOnServer, lastSavedTimestamp, data)
+  BigData(isRetrieved::Bool, isAvailable::Bool, isExistingOnServer::Bool, lastSavedTimestamp::AbstractString, data::Vector{BigDataElement}) = new(isRetrieved, isAvailable, isExistingOnServer, lastSavedTimestamp, data)
+  BigData(str::AbstractString) = begin
+      dd = JSON.parse(str)
+      bDE = BigDataElement[]
+      for (k,v) in dd["dataElements"]
+        push!( bDE, BigDataElement(v[1],Vector{UInt8}(),v[2]) )
+      end
+      new(dd["isRetrieved"],dd["isAvailable"],dd["isExistingOnServer"],dd["lastSavedTimestamp"], bDE)
+    end
 end
 
 type CloudVertex
@@ -54,7 +63,8 @@ type CloudVertex
   exVertexId::Int
   isValidExVertex::Bool
   CloudVertex() = new(Union, Dict{UTF8String, Any}(), BigData(), -1, nothing, Vector{AbstractString}(), false, -1, false)
-  CloudVertex{T <: AbstractString}(packed, properties, bigData, neo4jNodeId, neo4jNode, isValidNeoNodeId, exVertexId, isValidExVertex; labels::Vector{T}=Vector{String}()) = new(packed, properties, bigData, neo4jNodeId, neo4jNode, labels, isValidNeoNodeId, exVertexId, isValidExVertex)
+  CloudVertex{T <: AbstractString}(packed, properties, bigData::BigData, neo4jNodeId, neo4jNode, isValidNeoNodeId, exVertexId, isValidExVertex; labels::Vector{T}=Vector{String}()) = new(packed, properties, bigData, neo4jNodeId, neo4jNode, labels, isValidNeoNodeId, exVertexId, isValidExVertex)
+  CloudVertex{T <: AbstractString}(packed, properties, bigData::T, neo4jNodeId, neo4jNode, isValidNeoNodeId, exVertexId, isValidExVertex; labels::Vector{T}=Vector{String}()) = new(packed, properties, BigData(bigData), neo4jNodeId, neo4jNode, labels, isValidNeoNodeId, exVertexId, isValidExVertex)
 end
 
 # A single configuration type for a CloudGraph instance.
@@ -183,6 +193,11 @@ end
 
 # --- Internal utility methods ---
 
+"""
+    \_saveBigDataElement!(cg, vertex, bDE)
+
+Insert or update the actual data payload into Mongo as required. Does not update Neo4j.
+"""
 function _saveBigDataElement!(cg::CloudGraph, vertex::CloudVertex, bDE::BigDataElement)
   saveTime = string(Dates.now(Dates.UTC));
 
@@ -205,15 +220,15 @@ function _saveBigDataElement!(cg::CloudGraph, vertex::CloudVertex, bDE::BigDataE
   end
 end
 
-function save_BigData!(cg::CloudGraph, vertex::CloudVertex)
-  #Write to Mongo
-  for bDE in vertex.bigData.dataElements
-    _saveBigDataElement!(cg, vertex, bDE);
-  end
+"""
+    update_NeoBigData!(cg, vertex)
 
-  #Now update the Neo4j node.
+Update the bigData dictionary elements in Neo4j. Does not insert or read from Mongo.
+"""
+function update_NeoBigData!(cg::CloudGraph, vertex::CloudVertex)
   savedSets = Vector{Vector{UInt8}}();
   for elem in vertex.bigData.dataElements
+    # keep big data separate during Neo4j updates and remerge at end
     push!(savedSets, elem.data);
     elem.data = Vector{UInt8}();
   end
@@ -223,14 +238,24 @@ function save_BigData!(cg::CloudGraph, vertex::CloudVertex)
   # Get the json bigData prop.
   bdProp = json(vertex.bigData);
   # Now put the data back
-  i = 1;
+  i = 0;
   for elem in vertex.bigData.dataElements
+    i += 1;
     elem.data = savedSets[i];
-    i = i +1;
   end
 
   #Update the bigdata property
   setnodeproperty(vertex.neo4jNode, "bigData", bdProp);
+end
+
+function save_BigData!(cg::CloudGraph, vertex::CloudVertex)
+  #Write to Mongo
+  for bDE in vertex.bigData.dataElements
+    _saveBigDataElement!(cg, vertex, bDE);
+  end
+
+  #Now update the Neo4j node.
+  update_NeoBigData!(cg, vertex)
 end
 
 function read_BigData!(cg::CloudGraph, vertex::CloudVertex)
@@ -246,7 +271,7 @@ function read_BigData!(cg::CloudGraph, vertex::CloudVertex)
     results = first(find(cg.mongo.cgBindataCollection, ("_id" => eq(mongoId))));
     #Have it, now parse it until we have a native binary datatype.
     bDE.data = results["val"];
-    bDE.lastSavedTimestamp = results["lastSavedTimestamp"];
+    # bDE.lastSavedTimestamp = results["lastSavedTimestamp"]; # TODO -- does not work
   end
   return(vertex.bigData)
 end
@@ -292,8 +317,7 @@ function cloudVertex2NeoProps(cg::CloudGraph, vertex::CloudVertex)
   return props;
 end
 
-function neoNode2CloudVertex(cg::CloudGraph, neoNode::Neo4j.Node)
-  # Get the node properties.
+function unpackNeoNodeData2UsrType(cg::CloudGraph, neoNode::Neo4j.Node)
   props = neoNode.data;
 
   # Unpack the packed data using an interim UInt8[].
@@ -307,7 +331,13 @@ function neoNode2CloudVertex(cg::CloudGraph, neoNode::Neo4j.Node)
 
   packed = readproto(pB, cg.packedPackedDataTypes[typePackedRegName].packingType() );
   origtypedef = cg.packedPackedDataTypes[typePackedRegName].originalType
-  recvOrigType = cg.packedPackedDataTypes[typePackedRegName].decodingFunction(origtypedef, packed);
+  cg.packedPackedDataTypes[typePackedRegName].decodingFunction(origtypedef, packed);
+end
+
+function neoNode2CloudVertex(cg::CloudGraph, neoNode::Neo4j.Node)
+  # Get the node properties.
+  recvOrigType = unpackNeoNodeData2UsrType(cg, neoNode)
+  props = neoNode.data;
 
   # Big data
   jsonBD = props["bigData"];
