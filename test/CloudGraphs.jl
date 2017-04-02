@@ -54,6 +54,11 @@ cloudVertexRet = CloudGraphs.get_vertex(cloudGraph, cloudVertex.neo4jNode.id, tr
 @test cloudVertexRet.bigData.dataElements[1].data == cloudVertex.bigData.dataElements[1].data
 println("Success!")
 
+print("[TEST] Checking that we get a representative error when big data can't be retrieved...")
+cloudVertexRet.bigData.dataElements[1].mongoKey = BSONOID("000000000000000000000000")
+@test_throws ErrorException CloudGraphs.read_BigData!(cloudGraph, cloudVertexRet)
+println("Success!")
+
 print("[TEST] Testing the update method...")
 cloudVertex.properties["age"] = 100;
 cloudVertex.properties["latestEstimate"] = [5.0, 5.0, 5.0];

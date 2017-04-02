@@ -265,7 +265,7 @@ function read_BigData!(cg::CloudGraph, vertex::CloudVertex)
   for bDE in vertex.bigData.dataElements
     mongoId = BSONOID(bDE.mongoKey);
     numNodes = count(cg.mongo.cgBindataCollection, ("_id" => eq(mongoId)));
-    info("read_BigData! - The query for $(mongoId) returned $(numNodes) values.");
+    info("read_BigData! - The query for $(mongoId) returned $(numNodes) value(s).");
     if(numNodes != 1)
       error("The query for $(mongoId) returned $(numNodes) values, expected 1 result for this element!");
     end
@@ -406,7 +406,7 @@ function get_vertex(cg::CloudGraph, neoNodeId::Int, retrieveBigData::Bool)
     try
       read_BigData!(cg, cgVertex);
     catch ex
-      if(isa, ErrorException)
+      if(isa(ErrorException, ex))
         warning("Unable to retrieve bigData for node $(neoNodeId) - $(ex)")
       end
     end
