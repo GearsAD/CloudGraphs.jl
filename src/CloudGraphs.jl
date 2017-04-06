@@ -16,7 +16,7 @@ export CloudGraphConfiguration, CloudGraph, CloudVertex, CloudEdge, BigData, Big
 #Functions
 export connect, disconnect, add_vertex!, get_vertex, update_vertex!, delete_vertex!
 export add_edge!, delete_edge!, get_edge
-export save_BigData!, read_BigData, update_NeoBigData!
+export save_BigData!, read_BigData!, update_NeoBigData!
 export get_neighbors
 export cloudVertex2ExVertex, exVertex2CloudVertex
 export registerPackedType!, unpackNeoNodeData2UsrType
@@ -194,6 +194,9 @@ end
 
 # --- Internal utility methods ---
 
+function _validateBigDataElementTypes(bDE::BigDataElement)
+end
+
 """
     \_saveBigDataElement!(cg, vertex, bDE)
 
@@ -267,21 +270,16 @@ function read_BigData!(cg::CloudGraph, vertex::CloudVertex)
   for bDE in vertex.bigData.dataElements
     mongoId = BSONOID(bDE.mongoKey);
     numNodes = count(cg.mongo.cgBindataCollection, ("_id" => eq(mongoId)));
-    info("read_BigData! - The query for $(mongoId) returned $(numNodes) value(s).");
     if(numNodes != 1)
       error("The query for $(mongoId) returned $(numNodes) values, expected 1 result for this element!");
     end
     results = first(find(cg.mongo.cgBindataCollection, ("_id" => eq(mongoId))));
-    #@show results
-    #@show results["val"]
-    #Have it, now parse it until we have a native binary datatype.
+    #Have it, now parse it until we have a native binary or dictionary datatype.
     # If new type, convert back to dictionary
-    @show "HERE! $(typeof(results["val"]))"
     if(typeof(results["val"]) == BSONObject)
-      @show "Dictionary conversion"
-      bDE.data = dict(results["val"]);
+      testOutput = dict(results["val"]);
+      bDE.data = convert(Dict{AbstractString, Any}, testOutput) #From {Any, Any} to a more comfortable stronger type
     else
-      @show "Binary conversion"
       bDE.data = results["val"];
     end
     @show bDE.data
@@ -435,9 +433,7 @@ function get_vertex(cg::CloudGraph, neoNodeId::Int, retrieveBigData::Bool)
     try
       read_BigData!(cg, cgVertex);
     catch ex
-      if(isa(ex, ErrorException))
         warn("Unable to retrieve bigData for node $(neoNodeId) - $(ex)")
-      end
     end
   end
   return(cgVertex)

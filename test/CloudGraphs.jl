@@ -24,8 +24,9 @@ vertex.attributes["data"] = fullType;
 vertex.attributes["age"] = 64;
 vertex.attributes["latestEstimate"] = [0.0,0.0,0.0];
 bigData = CloudGraphs.BigData();
-testElement = CloudGraphs.BigDataElement("Performance test dataset.", rand(UInt8,100)); #Data element
-append!(bigData.dataElements, [testElement]);
+testElementLegacy = CloudGraphs.BigDataElement("Performance test dataset legacy.", rand(UInt8,100)); #Data element
+testElementDict = CloudGraphs.BigDataElement("Performance test dataset new dict type.", Dict{AbstractString, Any}("testString"=>"Test String", "randUint8"=>rand(UInt8,100))); #Data element
+append!(bigData.dataElements, [testElementLegacy, testElementDict]);
 vertex.attributes["bigData"] = bigData;
 # Now encoding the structure to CloudGraphs vertex
 cloudVertex = CloudGraphs.exVertex2CloudVertex(vertex);
@@ -50,8 +51,9 @@ println("Success!")
 
 print("[TEST] Checking the big data is persisted...")
 cloudVertexRet = CloudGraphs.get_vertex(cloudGraph, cloudVertex.neo4jNode.id, true) # fullType not required
-@test length(cloudVertexRet.bigData.dataElements) == 1
+@test length(cloudVertexRet.bigData.dataElements) == 2
 @test cloudVertexRet.bigData.dataElements[1].data == cloudVertex.bigData.dataElements[1].data
+@test json(cloudVertexRet.bigData.dataElements[2].data) == json(cloudVertex.bigData.dataElements[2].data)
 println("Success!")
 
 print("[TEST] Checking that we get a representative error when big data can't be retrieved...")
