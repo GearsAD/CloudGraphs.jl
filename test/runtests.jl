@@ -6,4 +6,6 @@ using Base.Test
 
 include("QuickPackProtoTest.jl")
 
+include("testDirectPackConversion.jl")
+
 include("CloudGraphs.jl")

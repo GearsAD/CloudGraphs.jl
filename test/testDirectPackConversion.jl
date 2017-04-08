@@ -19,12 +19,12 @@ module  Alone1 # CloudGraphs equivalence
           getfield(PT.name.module, Symbol(string(PT.name.name)[7:end]))
 
   function encoder(t)
-    println("[Alone1]: trying to pack outside type by conversion")
+    println("Alone1: trying to pack outside type by conversion")
     @show packedusrtype = convert(PackedUsrType, t) # get the outside user packed type
     packeddata = convert(packedusrtype, t)    # do packing to outside
   end
   function decoder(t)
-    println("[Alone1]: trying to unpack outside type by conversion")
+    println("Alone1: trying to unpack outside type by conversion")
     @show usrtype = convert(UsrType, t) # get the outside user packed type
     usrdata = convert(usrtype, t)    # do packing to outside
   end
@@ -46,11 +46,11 @@ module Alone2  # RoME/IIF equivalence
   end
   # user defince simple back and forth conversion of specialized type, will become auto macro later
   function convert(::Type{PackedT1}, v::T1)
-    println("[Alone2]: user packing T1") # gets called from Alone1
+    println("Alone2: user packing T1") # gets called from Alone1
     PackedT1(v.a)
   end
   function convert(::Type{T1}, v::PackedT1)
-    println("[Alone2]: user unpacking PackedT1")
+    println("Alone2: user unpacking PackedT1")
     T1(v.pa)
   end
 
@@ -74,6 +74,7 @@ module Combined # Caesar equivalence
 
 end
 
+println("[TEST] convert out of module types with dispatch and prepend 'Packed'")
 
 println("test dispatch of packing converters")
 
@@ -95,7 +96,7 @@ uvar = fetchdata(pvar)
 @test uvar.a == var.a
 
 
-
+println("[SUCCESS] can convert out of module types with dispatch")
 
 
 
