@@ -433,7 +433,7 @@ function get_vertex(cg::CloudGraph, neoNodeId::Int, retrieveBigData::Bool)
     try
       read_BigData!(cg, cgVertex);
     catch ex
-        warn("Unable to retrieve bigData for node $(neoNodeId) - $(ex)")
+      warn("Unable to retrieve bigData for node $(neoNodeId) - $(cgVertex.exVertexId)")
     end
   end
   return(cgVertex)
