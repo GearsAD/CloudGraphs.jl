@@ -16,7 +16,7 @@ export CloudGraphConfiguration, CloudGraph, CloudVertex, CloudEdge, BigData, Big
 #Functions
 export connect, disconnect, add_vertex!, get_vertex, update_vertex!, delete_vertex!
 export add_edge!, delete_edge!, get_edge
-export save_BigData!, read_BigData!, update_NeoBigData!
+export save_BigData!, read_BigData!, update_NeoBigData!, read_MongoData
 export get_neighbors
 export cloudVertex2ExVertex, exVertex2CloudVertex
 export registerPackedType!, unpackNeoNodeData2UsrType
@@ -263,26 +263,31 @@ function save_BigData!(cg::CloudGraph, vertex::CloudVertex)
   update_NeoBigData!(cg, vertex)
 end
 
+function read_MongoData(cg::CloudGraph, mongoKey::AbstractString)
+  mongoId = BSONOID(mongoKey);
+  numNodes = count(cg.mongo.cgBindataCollection, ("_id" => eq(mongoId)));
+  if(numNodes != 1)
+    error("The query for $(mongoId) returned $(numNodes) values, expected 1 result for this element!");
+  end
+  results = first(find(cg.mongo.cgBindataCollection, ("_id" => eq(mongoId))));
+  #Have it, now parse it until we have a native binary or dictionary datatype.
+  # If new type, convert back to dictionary
+  data = []
+  if(typeof(results["val"]) == BSONObject)
+    testOutput = dict(results["val"]);
+    data = convert(Dict{AbstractString, Any}, testOutput) #From {Any, Any} to a more comfortable stronger type
+  else
+    data = results["val"];
+  end
+  return data
+end
+
 function read_BigData!(cg::CloudGraph, vertex::CloudVertex)
   if(vertex.bigData.isExistingOnServer == false)
     error("The data does not exist on the server. 'isExistingOnServer' is false. Have you saved with set_BigData!()");
   end
   for bDE in vertex.bigData.dataElements
-    mongoId = BSONOID(bDE.mongoKey);
-    numNodes = count(cg.mongo.cgBindataCollection, ("_id" => eq(mongoId)));
-    if(numNodes != 1)
-      error("The query for $(mongoId) returned $(numNodes) values, expected 1 result for this element!");
-    end
-    results = first(find(cg.mongo.cgBindataCollection, ("_id" => eq(mongoId))));
-    #Have it, now parse it until we have a native binary or dictionary datatype.
-    # If new type, convert back to dictionary
-    if(typeof(results["val"]) == BSONObject)
-      testOutput = dict(results["val"]);
-      bDE.data = convert(Dict{AbstractString, Any}, testOutput) #From {Any, Any} to a more comfortable stronger type
-    else
-      bDE.data = results["val"];
-    end
-    @show bDE.data
+    bDE.data = read_MongoData(cg, bDE.mongoKey)
   end
   return(vertex.bigData)
 end
