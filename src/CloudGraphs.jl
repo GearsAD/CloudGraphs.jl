@@ -212,7 +212,7 @@ function _saveBigDataElement!(cg::CloudGraph, vertex::CloudVertex, bDE::BigDataE
     isNew = numNodes == 0;
   end
   if(isNew)
-    @show "Writing big data $(bDE.data)"
+    # @show "Writing big data $(bDE.data)"
     # Insert the node
     m_oid = insert(cg.mongo.cgBindataCollection, ("neoNodeId" => vertex.neo4jNodeId, "val" => bDE.data, "description" => bDE.description, "lastSavedTimestamp" => saveTime))
     @show "Inserted big data to mongo id = $(m_oid)"
