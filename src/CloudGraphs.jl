@@ -288,7 +288,6 @@ function read_BigData!(cg::CloudGraph, vertex::CloudVertex)
     error("The data does not exist on the server. 'isExistingOnServer' is false. Have you saved with set_BigData!()");
   end
   for bDE in vertex.bigData.dataElements
-    @show bDE.mongoKey
     bDE.data = read_MongoData(cg, bDE.mongoKey)
   end
   return(vertex.bigData)
