@@ -48,7 +48,7 @@ cloudVertexRet = CloudGraphs.get_vertex(cloudGraph, cloudVertex.neo4jNode.id, fa
 @test cloudVertexRet.neo4jNode != Void
 println("Success!")
 
-if(!haskey(ENV, "TRAVIS_OS_NAME))
+if !haskey(ENV, "TRAVIS_OS_NAME")
   print("[TEST] Checking the big data is persisted...")
   cloudVertexRet = CloudGraphs.get_vertex(cloudGraph, cloudVertex.neo4jNode.id, true) # fullType not required
   @test length(cloudVertexRet.bigData.dataElements) == 1
