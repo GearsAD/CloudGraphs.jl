@@ -10,12 +10,14 @@ Repository for the CloudGraphs project, an ongoing project on http://semisortedb
 
 ## Installation
 
-This package is writen for the [Julia language](http://www.julialang.org) (and [JuliaPro](http://www.juliacomputing.com)), and can be cloned via:
+This package is written for the [Julia language](http://www.julialang.org) (and [JuliaPro](http://www.juliacomputing.com)), and can be cloned via:
 
 ```julia
 Pkg.clone("https://github.com/GearsAD/CloudGraphs.jl.git")
 ```
 We are in the process of registering the package for easier install.
+
+Please note that this package requires MongoDB version `3` or higher for local DB usage.
 
 ## Users
 
