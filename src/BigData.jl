@@ -1,72 +1,33 @@
-
-export BigData, BigDataElement
 #Functions
 export save_BigData!, read_BigData!, update_NeoBigData!, read_MongoData
 
-# Type aliases
-BigDataRawType = Union{Vector{UInt8}, Dict{String, Any}}
-
-type BigDataElement
-    id::String
-    sourceName::String
-    description::String
-    data::BigDataRawType
-    mimeType::String
-    neoNodeId::Int
-    lastSavedTimestamp::String #UTC DateTime.
-    BigDataElement(sourceName::String, desc::String, data::BigDataRawType, neoNodeId::Int; id::String=string(Base.Random.uuid4()), mimeType::String="application/octet-stream", lastSavedTimestamp::String=string(now(Dates.UTC))) = new(key, sourceName, desc, data, neoNodeId, mimeType, lastSavedTimestamp)
-    BigDataElement{T <: String}(dd::Dict{T,Any}) = new(dd["id"], dd["sourceName"], dd["description"], dd["data"], dd["mimeType"], dd["neoNodeId"], dd["lastSavedTimestamp"])
-end
-
-type BigData
-  isRetrieved::Bool
-  isAvailable::Bool
-  isExistingOnServer::Bool
-  lastSavedTimestamp::AbstractString #UTC DateTime.
-  dataElements::Vector{BigDataElement}
-  # This is just for local use, and is not saved directly into the graph.
-  BigData() = new(false, false, false, "[N/A]", Vector{BigDataElement}())
-  BigData(isRetrieved::Bool, isAvailable::Bool, isExistingOnServer::Bool, lastSavedTimestamp::AbstractString, data::Vector{BigDataElement}) = new(isRetrieved, isAvailable, isExistingOnServer, lastSavedTimestamp, data)
-  BigData(str::AbstractString) = begin
-      dd = JSON.parse(str)
-      bDE = BigDataElement[]
-      for (k,v) in dd["dataElements"]
-         push!( bDE, BigDataElement(v[1],Vector{UInt8}(),v[2]) )
-      end
-      new(dd["isRetrieved"],dd["isAvailable"],dd["isExistingOnServer"],dd["lastSavedTimestamp"], bDE)
-    end
-end
+include("CommonStructs.jl")
 
 # --- Internal utility methods ---
 
-function _validateBigDataElementTypes(bDE::BigDataElement)
-end
-
 """
-    \_saveBigDataElement!(cg, vertex, bDE)
+    _saveBigDataElement!(cg, vertex, bDE)
 
 Insert or update the actual data payload into Mongo as required. Does not update Neo4j.
 """
-function _saveBigDataElement!(cg::CloudGraph, vertex::CloudVertex, bDE::BigDataElement)
+function _saveBigDataElement!(cg::CloudGraph, bDE::BigDataElement)
   saveTime = string(Dates.now(Dates.UTC));
 
   #Check if the key exists...
   isNew = true;
-  if(bDE.key != "")
-    numNodes = count(cg.mongo.cgBindataCollection, ("cgId" => BSONOID(bDE.id))); #NOT the oid, this is another indexable list
+  if(bDE.id != "")
+    numNodes = count(cg.mongo.cgBindataCollection, ("cgId" => bDE.id)); #NOT the oid, this is another indexable list
     isNew = numNodes == 0;
   end
   if(isNew)
     # @show "Writing big data $(bDE.data)"
     # Insert the node
-    m_oid = insert(cg.mongo.cgBindataCollection, ("cgId" => bDE.id, "neoNodeId" => vertex.neo4jNodeId, "val" => bDE.data, "description" => bDE.description, "lastSavedTimestamp" => saveTime))
-    @show "Inserted big data to mongo id = $(m_oid)"
-    #Update local instance
-    bDE.key = string(m_oid);
+    m_oid = insert(cg.mongo.cgBindataCollection, ("cgId" =>  bDE.id, "sourceName" => bDE.sourceName, "description" => bDE.description, "data" => bDE.data, "mimeType" => bDE.mimeType, "neoNodeId" => bDE.neoNodeId, "lastSavedTimestamp" => saveTime))
+    @show "Inserted big data to mongo id = $(m_oid) for cgId = $bDE.id"
   else
     # Update the node
-    m_oid = update(cg.mongo.cgBindataCollection, ("_id" => BSONOID(bDE.key)), set("neoNodeId" => vertex.neo4jNodeId, "val" => bDE.data, "description" => bDE.description, "lastSavedTimestamp" => saveTime))
-    @show "Updated big data to mongo id (result=$(m_oid)) (key $(bDE.key))"
+    m_oid = update(cg.mongo.cgBindataCollection, ("cgId" => bDE.id), set("sourceName" => bDE.sourceName, "description" => bDE.description, "data" => bDE.data, "mimeType" => bDE.mimeType, "neoNodeId" => bDE.neoNodeId, "lastSavedTimestamp" => saveTime))
+    @show "Updated big data to mongo id (result=$(m_oid)) (key $(bDE.id))"
   end
 end
 
@@ -76,11 +37,11 @@ end
 Update the bigData dictionary elements in Neo4j. Does not insert or read from Mongo.
 """
 function update_NeoBigData!(cg::CloudGraph, vertex::CloudVertex)
-  savedSets = Vector{savedSets = Union{Vector{UInt8}, Dict{AbstractString, Any}}}();
+  savedSets = Vector{savedSets = BigDataRawType}();
   for elem in vertex.bigData.dataElements
     # keep big data separate during Neo4j updates and remerge at end
     push!(savedSets, elem.data);
-    elem.data = Dict{AbstractString, Any}();
+    elem.data = Dict{String, Any}();
   end
   vertex.bigData.isExistingOnServer = true;
   vertex.bigData.lastSavedTimestamp = string(Dates.now(Dates.UTC));
@@ -101,40 +62,39 @@ end
 function save_BigData!(cg::CloudGraph, vertex::CloudVertex)
   #Write to Mongo
   for bDE in vertex.bigData.dataElements
-    _saveBigDataElement!(cg, vertex, bDE);
+    _saveBigDataElement!(cg, bDE);
   end
 
   #Now update the Neo4j node.
   update_NeoBigData!(cg, vertex)
 end
 
-function read_MongoData(cg::CloudGraph, key::AbstractString)
-  mongoId = BSONOID(key);
-  numNodes = count(cg.mongo.cgBindataCollection, ("_id" => eq(mongoId)));
+function read_MongoData(cg::CloudGraph, id::String)::BigDataRawType
+  numNodes = count(cg.mongo.cgBindataCollection, ("cgId" => id));
   if(numNodes != 1)
     error("The query for $(mongoId) returned $(numNodes) values, expected 1 result for this element!");
   end
-  findres = find(cg.mongo.cgBindataCollection, ("_id" => eq(mongoId)))
+  findres = find(cg.mongo.cgBindataCollection, ("cgId" => id))
   results = first(findres)
   #Have it, now parse it until we have a native binary or dictionary datatype.
   # If new type, convert back to dictionary
   data = []
-  if(typeof(results["val"]) == BSONObject)
-    testOutput = dict(results["val"]);
-    data = convert(Dict{AbstractString, Any}, testOutput) #From {Any, Any} to a more comfortable stronger type
+  if(typeof(results["data"]) == BSONObject)
+    testOutput = dict(results["data"]);
+    return convert(Dict{String, Any}, testOutput) #From {Any, Any} to a more comfortable stronger type
   else
-    data = results["val"];
+    return results["data"];
   end
-  return data
 end
 
-function read_BigData!(cg::CloudGraph, vertex::CloudVertex)
+function read_BigData!(cg::CloudGraph, vertex::CloudVertex)::BigData
   if(vertex.bigData.isExistingOnServer == false)
     error("The data does not exist on the server. 'isExistingOnServer' is false. Have you saved with set_BigData!()");
   end
   for bDE in vertex.bigData.dataElements
-    bDE.data = read_MongoData(cg, bDE.key)
+    bDE.data = read_MongoData(cg, bDE.id)
   end
+  vertex.bigData.isRetrieved = true
   return(vertex.bigData)
 end
 
@@ -146,11 +106,10 @@ function delete_BigData!(cg::CloudGraph, vertex::CloudVertex)
   vertex.bigData.isExistingOnServer = false
   # Delete the data.
   for bDE in vertex.bigData.dataElements
-    mongoId = BSONOID(bDE.key);
-    numNodes = count(cg.mongo.cgBindataCollection, ("_id" => eq(mongoId)));
+    numNodes = count(cg.mongo.cgBindataCollection, ("cgId" => bDE.id));
     info("delete_BigData! - The query for $(mongoId) returned $(numNodes) value(s).");
     if(numNodes > 0)
-      delete(cg.mongo.cgBindataCollection, ("_id" => eq(mongoId)));
+      delete(cg.mongo.cgBindataCollection, ("cgId" => bDE.id));
     end
   end
 end

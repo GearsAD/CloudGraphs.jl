@@ -11,8 +11,6 @@ using JSON;
 
 # extending methods
 
-#Types
-export CloudGraphConfiguration, CloudGraph, CloudVertex, CloudEdge
 #Functions
 export connect, disconnect, add_vertex!, get_vertex, update_vertex!, delete_vertex!
 export add_edge!, delete_edge!, get_edge
@@ -20,83 +18,8 @@ export get_neighbors
 export cloudVertex2ExVertex, exVertex2CloudVertex
 export registerPackedType!, unpackNeoNodeData2UsrType
 
-import("BigData.jl")
-
-type CloudVertex
-  packed::Any
-  properties::Dict{AbstractString, Any} # UTF8String
-  bigData::BigData
-  neo4jNodeId::Int
-  neo4jNode::Union{Void,Neo4j.Node}
-  labels::Vector{AbstractString}
-  isValidNeoNodeId::Bool
-  exVertexId::Int
-  isValidExVertex::Bool
-  CloudVertex() = new(Union, Dict{UTF8String, Any}(), BigData(), -1, nothing, Vector{AbstractString}(), false, -1, false)
-  CloudVertex{T <: AbstractString}(packed, properties, bigData::BigData, neo4jNodeId, neo4jNode, isValidNeoNodeId, exVertexId, isValidExVertex; labels::Vector{T}=Vector{String}()) = new(packed, properties, bigData, neo4jNodeId, neo4jNode, labels, isValidNeoNodeId, exVertexId, isValidExVertex)
-  CloudVertex{T <: AbstractString}(packed, properties, bigData::T, neo4jNodeId, neo4jNode, isValidNeoNodeId, exVertexId, isValidExVertex; labels::Vector{T}=Vector{String}()) = new(packed, properties, BigData(bigData), neo4jNodeId, neo4jNode, labels, isValidNeoNodeId, exVertexId, isValidExVertex)
-end
-
-# A single configuration type for a CloudGraph instance.
-type CloudGraphConfiguration
-  neo4jHost::AbstractString # UTF8String
-  neo4jPort::Int
-  neo4jUsername::AbstractString # UTF8String
-  neo4jPassword::AbstractString # UTF8String
-  mongoHost::AbstractString # UTF8String
-  mongoPort::Int
-  mongoIsUsingCredentials::Bool
-  mongoUsername::AbstractString # UTF8String
-  mongoPassword::AbstractString # UTF8String
-end
-
-type Neo4jInstance
-  connection::Neo4j.Connection
-  graph::Neo4j.Graph
-end
-
-type MongoDbInstance
-  client::Mongo.MongoClient
-  cgBindataCollection::MongoCollection
-end
-
-type PackedType
-  originalType::Type
-  packingType::Type
-  encodingFunction::Union{Function, Union}
-  decodingFunction::Union{Function, Union}
-end
-
-# A CloudGraph instance
-type CloudGraph
-  configuration::CloudGraphConfiguration
-  neo4j::Neo4jInstance
-  mongo::MongoDbInstance
-  packedPackedDataTypes::Dict{AbstractString, PackedType}
-  packedOriginalDataTypes::Dict{AbstractString, PackedType}
-  CloudGraph(configuration, neo4j, mongo) = new(configuration, neo4j, mongo, Dict{AbstractString, PackedType}(), Dict{AbstractString, PackedType}())
-  CloudGraph(configuration, neo4j, mongo, packedDataTypes, originalDataTypes) = new(configuration, neo4j, mongo, packedDataTypes, originalDataTypes)
-end
-
-type CloudEdge
-  neo4jEdgeId::Int
-  neo4jEdge::Union{Void,Neo4j.Relationship}
-  edgeType::AbstractString #UTF8String
-  neo4jSourceVertexId::Int
-  SourceVertex::Union{Void,CloudGraphs.CloudVertex}  #neo4jSourceVertex::Union{Void,Neo4j.Node}
-  neo4jDestVertexId::Int
-  DestVertex::Union{Void,CloudGraphs.CloudVertex}  #neo4jDestVertex::Union{Void,Neo4j.Node}
-  properties::Dict{AbstractString, Any} # UTF8String
-  CloudEdge() = new(-1, nothing, "", -1, nothing, -1, nothing, Dict{AbstractString, Any}())
-  # UTF8String
-  CloudEdge{T <: AbstractString}(vertexSrc::CloudVertex, vertexDest::CloudVertex, edgeType::T; props::Dict{T, Any}=Dict{T, Any}()) = new(
-    -1, nothing, string(edgeType), # utf8(edgeType)
-    vertexSrc.neo4jNodeId,
-    vertexSrc, #.neo4jNode,
-    vertexDest.neo4jNodeId,
-    vertexDest, #.neo4jNode,
-    props)
-end
+include("CommonStructs.jl")
+include("BigData.jl")
 
 import Base.connect
 # --- CloudGraph initialization ---
@@ -126,7 +49,7 @@ end
 
 # --- Common conversion functions ---
 function exVertex2CloudVertex(vertex::ExVertex)
-  cgvProperties = Dict{AbstractString, Any}();
+  cgvProperties = Dict{String, Any}();
 
   #1. Get the special attributes - payload, etc.
   propNames = keys(vertex.attributes);
@@ -161,151 +84,35 @@ function cloudVertex2ExVertex(vertex::CloudVertex)
   return vert
 end
 
-# --- Internal utility methods ---
-
-function _validateBigDataElementTypes(bDE::BigDataElement)
-end
-
-"""
-    \_saveBigDataElement!(cg, vertex, bDE)
-
-Insert or update the actual data payload into Mongo as required. Does not update Neo4j.
-"""
-function _saveBigDataElement!(cg::CloudGraph, vertex::CloudVertex, bDE::BigDataElement)
-  saveTime = string(Dates.now(Dates.UTC));
-
-  #Check if the key exists...
-  isNew = true;
-  if(bDE.key != "")
-    numNodes = count(cg.mongo.cgBindataCollection, ("_id" => BSONOID(bDE.key)));
-    isNew = numNodes == 0;
-  end
-  if(isNew)
-    # @show "Writing big data $(bDE.data)"
-    # Insert the node
-    m_oid = insert(cg.mongo.cgBindataCollection, ("neoNodeId" => vertex.neo4jNodeId, "val" => bDE.data, "description" => bDE.description, "lastSavedTimestamp" => saveTime))
-    @show "Inserted big data to mongo id = $(m_oid)"
-    #Update local instance
-    bDE.key = string(m_oid);
-  else
-    # Update the node
-    m_oid = update(cg.mongo.cgBindataCollection, ("_id" => BSONOID(bDE.key)), set("neoNodeId" => vertex.neo4jNodeId, "val" => bDE.data, "description" => bDE.description, "lastSavedTimestamp" => saveTime))
-    @show "Updated big data to mongo id (result=$(m_oid)) (key $(bDE.key))"
-  end
-end
-
-"""
-    update_NeoBigData!(cg, vertex)
-
-Update the bigData dictionary elements in Neo4j. Does not insert or read from Mongo.
-"""
-function update_NeoBigData!(cg::CloudGraph, vertex::CloudVertex)
-  savedSets = Vector{savedSets = Union{Vector{UInt8}, Dict{AbstractString, Any}}}();
-  for elem in vertex.bigData.dataElements
-    # keep big data separate during Neo4j updates and remerge at end
-    push!(savedSets, elem.data);
-    elem.data = Dict{AbstractString, Any}();
-  end
-  vertex.bigData.isExistingOnServer = true;
-  vertex.bigData.lastSavedTimestamp = string(Dates.now(Dates.UTC));
-
-  # Get the json bigData prop.
-  bdProp = json(vertex.bigData);
-  # Now put the data back
-  i = 0;
-  for elem in vertex.bigData.dataElements
-    i += 1;
-    elem.data = savedSets[i];
-  end
-
-  #Update the bigdata property
-  setnodeproperty(vertex.neo4jNode, "bigData", bdProp);
-end
-
-function save_BigData!(cg::CloudGraph, vertex::CloudVertex)
-  #Write to Mongo
-  for bDE in vertex.bigData.dataElements
-    _saveBigDataElement!(cg, vertex, bDE);
-  end
-
-  #Now update the Neo4j node.
-  update_NeoBigData!(cg, vertex)
-end
-
-function read_MongoData(cg::CloudGraph, key::AbstractString)
-  mongoId = BSONOID(key);
-  numNodes = count(cg.mongo.cgBindataCollection, ("_id" => eq(mongoId)));
-  if(numNodes != 1)
-    error("The query for $(mongoId) returned $(numNodes) values, expected 1 result for this element!");
-  end
-  findres = find(cg.mongo.cgBindataCollection, ("_id" => eq(mongoId)))
-  results = first(findres)
-  #Have it, now parse it until we have a native binary or dictionary datatype.
-  # If new type, convert back to dictionary
-  data = []
-  if(typeof(results["val"]) == BSONObject)
-    testOutput = dict(results["val"]);
-    data = convert(Dict{AbstractString, Any}, testOutput) #From {Any, Any} to a more comfortable stronger type
-  else
-    data = results["val"];
-  end
-  return data
-end
-
-function read_BigData!(cg::CloudGraph, vertex::CloudVertex)
-  if(vertex.bigData.isExistingOnServer == false)
-    error("The data does not exist on the server. 'isExistingOnServer' is false. Have you saved with set_BigData!()");
-  end
-  for bDE in vertex.bigData.dataElements
-    bDE.data = read_MongoData(cg, bDE.key)
-  end
-  return(vertex.bigData)
-end
-
-function delete_BigData!(cg::CloudGraph, vertex::CloudVertex)
-  if(vertex.bigData.isExistingOnServer == false)
-    error("The data does not exist on the server. 'isExistingOnServer' is false. Have you saved with set_BigData!()");
-  end
-  # Update structure now so if it fails midway and we save again it still writes a new set of keys.
-  vertex.bigData.isExistingOnServer = false
-  # Delete the data.
-  for bDE in vertex.bigData.dataElements
-    mongoId = BSONOID(bDE.key);
-    numNodes = count(cg.mongo.cgBindataCollection, ("_id" => eq(mongoId)));
-    info("delete_BigData! - The query for $(mongoId) returned $(numNodes) value(s).");
-    if(numNodes > 0)
-      delete(cg.mongo.cgBindataCollection, ("_id" => eq(mongoId)));
-    end
-  end
-end
-
 function cloudVertex2NeoProps(cg::CloudGraph, vertex::CloudVertex)
   props = deepcopy(vertex.properties);
-  # Packed information
-  pB = PipeBuffer();
-  # ProtoBuf.writeproto(pB, vertex.packed);
-  typeKey="NoType"
-  # @show string(typeof(vertex.packed))
-  # @show keys(cg.packedOriginalDataTypes)
-  if(haskey(cg.packedOriginalDataTypes, string(typeof(vertex.packed)) ) ) # @GearsAD check, it was cg.convertTypes
-    typeOriginalRegName = string(typeof(vertex.packed));
-    packingtypedef = cg.packedOriginalDataTypes[typeOriginalRegName].packingType
-    packedType = cg.packedOriginalDataTypes[typeOriginalRegName].encodingFunction(packingtypedef, vertex.packed);
-    ProtoBuf.writeproto(pB, packedType); # vertex.packed
-    typeKey = string(typeof(packedType));
-  else
-    error("CloudGraphs doesn't know how to convert packedOriginalDataTypes $(typeof(vertex.packed))")
-  end
-  props["data"] = pB.data;
-  props["packedType"] = typeKey;
 
+  #If the vertex has packed data.
+  if(vertex.packed != "")
+      # Packed information
+      pB = PipeBuffer();
+      # ProtoBuf.writeproto(pB, vertex.packed);
+      typeKey="NoType"
+
+      if(haskey(cg.packedOriginalDataTypes, string(typeof(vertex.packed)) ) ) # @GearsAD check, it was cg.convertTypes
+        typeOriginalRegName = string(typeof(vertex.packed));
+        packingtypedef = cg.packedOriginalDataTypes[typeOriginalRegName].packingType
+        packedType = cg.packedOriginalDataTypes[typeOriginalRegName].encodingFunction(packingtypedef, vertex.packed);
+        ProtoBuf.writeproto(pB, packedType); # vertex.packed
+        typeKey = string(typeof(packedType));
+      else
+        error("CloudGraphs doesn't know how to convert packedOriginalDataTypes $(typeof(vertex.packed))")
+      end
+      props["data"] = pB.data;
+      props["packedType"] = typeKey;
+  end
   # Big data
   # Write it.
   # Clear the underlying data in the Neo4j dataset and serialize the big data.
-  savedSets = Vector{Union{Vector{UInt8}, Dict{AbstractString, Any}}}();
+  savedSets = Vector{Union{Vector{UInt8}, Dict{String, Any}}}();
   for elem in vertex.bigData.dataElements
     push!(savedSets, elem.data);
-    elem.data = Dict{AbstractString, Any}();
+    elem.data = Dict{String, Any}();
   end
   props["bigData"] = json(vertex.bigData);
   # Now put it back
@@ -348,18 +155,19 @@ function neoNode2CloudVertex(cg::CloudGraph, neoNode::Neo4j.Node)
   # new addition of the timestamp.
   # TODO [GearsAD] : Remove this in the future as all nodes should have it.
   ts = haskey(bDS, "lastSavedTimestamp") ? bDS["lastSavedTimestamp"] : "[N/A]";
-  bigData = BigData(bDS["isRetrieved"], bDS["isAvailable"], bDS["isExistingOnServer"], ts, Vector{BigDataElement}());
+  version = haskey(bDS, "version") ? bDS["version"] : "1"
+  bigData = BigData(bDS["isRetrieved"], bDS["isAvailable"], bDS["isExistingOnServer"], ts, version, Vector{BigDataElement}());
   # TODO [GearsAD]: Remove the haskey again in the future once all nodes are up to date.
   if(haskey(bDS, "dataElements"))
     for bDE in bDS["dataElements"]
-      elem = BigDataElement(bDE["description"], Vector{UInt8}(), bDE["key"], neoNode.id, ts);
-      push!(bigData.dataElements, elem);
+        elem = BigDataElement(bDE, version)
+        push!(bigData.dataElements, elem)
     end
   end
 
-  labels = convert(Vector{AbstractString}, Neo4j.getnodelabels(neoNode));
+  labels = convert(Vector{String}, Neo4j.getnodelabels(neoNode));
   if(length(labels) == 0)
-    labels = Vector{AbstractString}();
+    labels = Vector{String}();
   end
 
   # Now delete these out the props leaving the rest as general properties
@@ -379,7 +187,7 @@ function add_vertex!(cg::CloudGraph, vertex::ExVertex)
   add_vertex!(cg, exVertex2CloudVertex(vertex));
 end
 
-function add_vertex!(cg::CloudGraph, vertex::CloudVertex)
+function add_vertex!(cg::CloudGraph, vertex::CloudVertex)::Int
   try
     props = cloudVertex2NeoProps(cg, vertex)
     vertex.neo4jNode = Neo4j.createnode(cg.neo4j.graph, props);
@@ -394,10 +202,9 @@ function add_vertex!(cg::CloudGraph, vertex::CloudVertex)
     save_BigData!(cg, vertex);
     # make sure original struct gets the new bits of data it should have -- rather show than hide?
     # for ky in ["data"; "packedType"]  vertex.properties[ky] = props[ky] end
-    return vertex.neo4jNode;
+    return vertex.neo4jNodeId;
   catch e
-    rethrow(e);
-    return false;
+    rethrow(e)
   end
 end
 
@@ -408,7 +215,8 @@ function get_vertex(cg::CloudGraph, neoNodeId::Int, retrieveBigData::Bool)
     try
       read_BigData!(cg, cgVertex);
     catch ex
-      warn("Unable to retrieve bigData for node $(neoNodeId) - $(cgVertex.exVertexId)")
+        println(catch_stacktrace())
+        warn("Unable to retrieve bigData for node ID '$(neoNodeId)' - $(ex)")
     end
   end
   return(cgVertex)
@@ -424,7 +232,7 @@ function get_vertex(cg::CloudGraph, neoNodeId::Int)
   end
 end
 
-function update_vertex!(cg::CloudGraph, vertex::CloudVertex)
+function update_vertex!(cg::CloudGraph, vertex::CloudVertex, updateBigData::Bool)::Void
   try
     if(vertex.neo4jNode == nothing)
       error("There isn't a Neo4j Node associated with this CloudVertex. You might want to call add_vertex instead of update_vertex.");
@@ -435,12 +243,20 @@ function update_vertex!(cg::CloudGraph, vertex::CloudVertex)
 
     # Update the labels
     Neo4j.updatenodelabels(vertex.neo4jNode, vertex.labels);
+
+    # Update the BigData
+    if(updateBigData)
+        info("Updating bigData for node $(vertex.neo4jNodeId)...")
+        update_NeoBigData!(cg, vertex)
+    end
+
+    return nothing
   catch e
     rethrow(e);
   end
 end
 
-function delete_vertex!(cg::CloudGraph, vertex::CloudVertex)
+function delete_vertex!(cg::CloudGraph, vertex::CloudVertex)::Void
   if(vertex.neo4jNode == nothing)
     error("There isn't a Neo4j Node associated with this CloudVertex.");
   end
