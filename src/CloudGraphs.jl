@@ -222,16 +222,6 @@ function get_vertex(cg::CloudGraph, neoNodeId::Int, retrieveBigData::Bool)
   return(cgVertex)
 end
 
-# Retrieve a vertex and decompress it into a CloudVertex
-function get_vertex(cg::CloudGraph, neoNodeId::Int)
-  try
-    neoNode = Neo4j.getnode(cg.neo4j.graph, neoNodeId);
-    return(neoNode2CloudVertex(cg, neoNode))
-  catch e
-    rethrow(e);
-  end
-end
-
 function update_vertex!(cg::CloudGraph, vertex::CloudVertex, updateBigData::Bool)::Void
   try
     if(vertex.neo4jNode == nothing)
@@ -265,7 +255,7 @@ function delete_vertex!(cg::CloudGraph, vertex::CloudVertex)::Void
     delete_BigData(cg, vertex)
   catch ex
     if(isa(ex, ErrorException))
-      warn("Unable to completely delete bigData for node $(neoNodeId) - $(ex)")
+    warn("Unable to completely delete bigData for node $(neoNodeId) - $(ex)")
     end
   end
 
@@ -304,8 +294,8 @@ function add_edge!(cg::CloudGraph, edge::CloudEdge)
     edge.DestVertex.properties["neighborVertexIDs"] = Array{Int64,1}([edge.SourceVertex.neo4jNodeId])
   end
 
-  update_vertex!(cg, edge.SourceVertex)
-  update_vertex!(cg, edge.DestVertex)
+  update_vertex!(cg, edge.SourceVertex, false)
+  update_vertex!(cg, edge.DestVertex, false)
 
   retrel
 end
@@ -347,8 +337,8 @@ function delete_edge!(cg::CloudGraph, edge::CloudEdge)
   edge.SourceVertex.properties["neighborVertexIDs"] = edge.SourceVertex.properties["neighborVertexIDs"][edge.SourceVertex.properties["neighborVertexIDs"] .!= edge.DestVertex.neo4jNodeId];
   edge.DestVertex.properties["neighborVertexIDs"] = edge.DestVertex.properties["neighborVertexIDs"][edge.DestVertex.properties["neighborVertexIDs"] .!= edge.SourceVertex.neo4jNodeId];
   # Update the vertices
-  update_vertex!(cg, edge.SourceVertex);
-  update_vertex!(cg, edge.DestVertex);
+  update_vertex!(cg, edge.SourceVertex, false);
+  update_vertex!(cg, edge.DestVertex, false);
 
   nothing;
 end
