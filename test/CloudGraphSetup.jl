@@ -1,9 +1,9 @@
-using Base.Test, FactCheck;
-using Graphs;
-using ProtoBuf;
-using JSON;
-using CloudGraphs;
-using LibBSON;
+using Base.Test, FactCheck
+using Graphs
+using ProtoBuf
+using JSON
+using CloudGraphs
+using LibBSON
 
 # Have we loaded the library?
 @test isdefined(:CloudGraphs) == true

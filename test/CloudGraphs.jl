@@ -24,8 +24,8 @@ vertex.attributes["data"] = fullType;
 vertex.attributes["age"] = 64;
 vertex.attributes["latestEstimate"] = [0.0,0.0,0.0];
 bigData = CloudGraphs.BigData();
-testElementLegacy = CloudGraphs.BigDataElement("Performance test dataset legacy.", rand(UInt8,100)); #Data element
-testElementDict = CloudGraphs.BigDataElement("Performance test dataset new dict type.", Dict{AbstractString, Any}("testString"=>"Test String", "randUint8"=>rand(UInt8,100))); #Data element
+testElementLegacy = CloudGraphs.BigDataElement("Mongo", "Performance test dataset legacy.", rand(UInt8,100), -1); #Data element
+testElementDict = CloudGraphs.BigDataElement("Mongo", "Performance test dataset new dict type.", Dict{String, Any}("testString"=>"Test String", "randUint8"=>rand(UInt8,100)), -1); #Data element
 append!(bigData.dataElements, [testElementLegacy, testElementDict]);
 vertex.attributes["bigData"] = bigData;
 # Now encoding the structure to CloudGraphs vertex
@@ -49,25 +49,10 @@ cloudVertexRet = CloudGraphs.get_vertex(cloudGraph, cloudVertex.neo4jNode.id, fa
 @test cloudVertexRet.neo4jNode != Void
 println("Success!")
 
-if !haskey(ENV, "TRAVIS_OS_NAME")
-  print("[TEST] Checking the big data is persisted...")
-  cloudVertexRet = CloudGraphs.get_vertex(cloudGraph, cloudVertex.neo4jNode.id, true) # fullType not required
-  @test length(cloudVertexRet.bigData.dataElements) == 2
-  @test cloudVertexRet.bigData.dataElements[1].data == cloudVertex.bigData.dataElements[1].data
-  @test json(cloudVertexRet.bigData.dataElements[2].data) == json(cloudVertex.bigData.dataElements[2].data)
-else
-  print("[TEST] NOTE: Testing in Travis, skipping the Mongo bigData test for the moment...")
-end
-println("Success!")
-print("[TEST] Checking that we get a representative error when big data can't be retrieved...")
-cloudVertexRet.bigData.dataElements[1].mongoKey = BSONOID("000000000000000000000000")
-@test_throws ErrorException CloudGraphs.read_BigData!(cloudGraph, cloudVertexRet)
-println("Success!")
-
 print("[TEST] Testing the update method...")
 cloudVertex.properties["age"] = 100;
 cloudVertex.properties["latestEstimate"] = [5.0, 5.0, 5.0];
-CloudGraphs.update_vertex!(cloudGraph, cloudVertex);
+CloudGraphs.update_vertex!(cloudGraph, cloudVertex, false);
 # Let's retrieve it and see if it is updated.
 cloudVertexRet = CloudGraphs.get_vertex(cloudGraph, cloudVertex.neo4jNode.id, false)
 # And check that it matches
@@ -86,14 +71,14 @@ cloudVertexWithLabelsRet = CloudGraphs.get_vertex(cloudGraph, cloudVertexWithLab
 @test cloudVertexWithLabels.labels == cloudVertexWithLabelsRet.labels
 println("[Test] Adding a label...")
 push!(cloudVertexWithLabels.labels, "AnotherLabel")
-CloudGraphs.update_vertex!(cloudGraph, cloudVertexWithLabels);
+CloudGraphs.update_vertex!(cloudGraph, cloudVertexWithLabels, false);
 cloudVertexWithLabelsRet = CloudGraphs.get_vertex(cloudGraph, cloudVertexWithLabels.neo4jNode.id, false)
 @test cloudVertexWithLabels.labels == cloudVertexWithLabelsRet.labels
 println("Success!")
 # Now clear out all the labels
 println("[Test] Clearing all labels...")
 cloudVertexWithLabels.labels = Vector{AbstractString}()
-CloudGraphs.update_vertex!(cloudGraph, cloudVertexWithLabels);
+CloudGraphs.update_vertex!(cloudGraph, cloudVertexWithLabels, false);
 cloudVertexWithLabelsRet = CloudGraphs.get_vertex(cloudGraph, cloudVertexWithLabels.neo4jNode.id, false)
 @test cloudVertexWithLabels.labels == cloudVertexWithLabelsRet.labels
 println("Success!")
