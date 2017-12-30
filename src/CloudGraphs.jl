@@ -208,18 +208,19 @@ function add_vertex!(cg::CloudGraph, vertex::CloudVertex)::Int
   end
 end
 
-# Deprecating the native GetData calls for BigData.
+# Get a CloudGraphs vertex.
 function get_vertex(cg::CloudGraph, neoNodeId::Int, retrieveBigData::Bool)
-  cgVertex = get_vertex(cg, neoNodeId)
-  if(retrieveBigData && cgVertex.bigData.isExistingOnServer)
+    neoNode = Neo4j.getnode(cg.neo4j.graph, neoNodeId);
+    cgVertex = neoNode2CloudVertex(cg, neoNode);
+    if(retrieveBigData && cgVertex.bigData.isExistingOnServer)
     try
-      read_BigData!(cg, cgVertex);
+        read_BigData!(cg, cgVertex);
     catch ex
         println(catch_stacktrace())
         warn("Unable to retrieve bigData for node ID '$(neoNodeId)' - $(ex)")
     end
-  end
-  return(cgVertex)
+    end
+    return(cgVertex)
 end
 
 function update_vertex!(cg::CloudGraph, vertex::CloudVertex, updateBigData::Bool)::Void

@@ -60,8 +60,12 @@ print("[TEST] Testing delete method...")
 delete_vertex!(cloudGraph, cloudVertex)
 println("Success!")
 
-#TODO STILL WIP HERE
 print("[TEST] Checking that we get a representative error when big data can't be retrieved...")
 cloudVertexRet.bigData.dataElements[1].id = "DoesntExist"
 @test_throws ErrorException CloudGraphs.read_BigData!(cloudGraph, cloudVertexRet)
 println("Success!")
+
+# Saving an image as binary
+fid = open(dirname(Base.source_path()) * "/IMG_1407.JPG","r")
+imgBytes = read(fid)
+close(fid)
