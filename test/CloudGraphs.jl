@@ -68,19 +68,19 @@ CloudGraphs.add_vertex!(cloudGraph, cloudVertexWithLabels);
 println("Success!")
 println("[Test] Getting the vertex and checking labels exist...")
 cloudVertexWithLabelsRet = CloudGraphs.get_vertex(cloudGraph, cloudVertexWithLabels.neo4jNode.id, false)
-@test cloudVertexWithLabels.labels == cloudVertexWithLabelsRet.labels
+@test length(setdiff(cloudVertexWithLabels.labels, cloudVertexWithLabelsRet.labels)) == 0
 println("[Test] Adding a label...")
 push!(cloudVertexWithLabels.labels, "AnotherLabel")
 CloudGraphs.update_vertex!(cloudGraph, cloudVertexWithLabels, false);
 cloudVertexWithLabelsRet = CloudGraphs.get_vertex(cloudGraph, cloudVertexWithLabels.neo4jNode.id, false)
-@test cloudVertexWithLabels.labels == cloudVertexWithLabelsRet.labels
+@test length(setdiff(cloudVertexWithLabels.labels, cloudVertexWithLabelsRet.labels)) == 0
 println("Success!")
 # Now clear out all the labels
 println("[Test] Clearing all labels...")
 cloudVertexWithLabels.labels = Vector{AbstractString}()
 CloudGraphs.update_vertex!(cloudGraph, cloudVertexWithLabels, false);
 cloudVertexWithLabelsRet = CloudGraphs.get_vertex(cloudGraph, cloudVertexWithLabels.neo4jNode.id, false)
-@test cloudVertexWithLabels.labels == cloudVertexWithLabelsRet.labels
+@test length(setdiff(cloudVertexWithLabels.labels, cloudVertexWithLabelsRet.labels)) == 0
 println("Success!")
 
 print("[TEST] Deleting a CloudGraph vertex...")
