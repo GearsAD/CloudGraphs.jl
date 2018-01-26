@@ -21,6 +21,9 @@ export registerPackedType!, unpackNeoNodeData2UsrType
 include("CommonStructs.jl")
 include("BigData.jl")
 
+# WHenever bigData is saved, we upgrade it to the latest version.
+BIGDATA_CURVERSION = "2"
+
 import Base.connect
 # --- CloudGraph initialization ---
 function connect(configuration::CloudGraphConfiguration)
@@ -153,8 +156,7 @@ function neoNode2CloudVertex(cg::CloudGraph, neoNode::Neo4j.Node)
   jsonBD = props["bigData"];
   bDS = JSON.parse(jsonBD);
   # new addition of the timestamp.
-  # TODO [GearsAD] : Remove this in the future as all nodes should have it.
-  ts = haskey(bDS, "lastSavedTimestamp") ? bDS["lastSavedTimestamp"] : "[N/A]";
+  ts = bDS["lastSavedTimestamp"];
   version = haskey(bDS, "version") ? bDS["version"] : "1"
   bigData = BigData(bDS["isRetrieved"], bDS["isAvailable"], bDS["isExistingOnServer"], ts, version, Vector{BigDataElement}());
   # TODO [GearsAD]: Remove the haskey again in the future once all nodes are up to date.
@@ -164,6 +166,9 @@ function neoNode2CloudVertex(cg::CloudGraph, neoNode::Neo4j.Node)
         push!(bigData.dataElements, elem)
     end
   end
+
+  #In-situ version update in case it's saved back
+  bigData.version = BIGDATA_CURVERSION;
 
   labels = convert(Vector{String}, Neo4j.getnodelabels(neoNode));
   if(length(labels) == 0)
