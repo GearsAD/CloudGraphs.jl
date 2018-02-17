@@ -1,5 +1,5 @@
 #Functions
-export save_BigData!, read_BigData!, update_NeoBigData!, read_MongoData
+export save_BigData!, read_BigData!, update_NeoBigDataEntries!, read_MongoData, delete_MongoData
 
 include("CommonStructs.jl")
 
@@ -13,31 +13,41 @@ Insert or update the actual data payload into Mongo as required. Does not update
 function _saveBigDataElement!(cg::CloudGraph, bDE::BigDataElement)::Void
   saveTime = string(Dates.now(Dates.UTC));
 
-  #Check if the key exists...
+  # 1. Get the collection name, if set...
+  collection = cg.mongo.cgBindataCollection
+  # DB customization for multitenancy
+  if(haskey(bDE.sourceParams, "database") && haskey(bDE.sourceParams, "collection"))
+      collection = Mongo.MongoCollection(cg.mongo.client, bDE.sourceParams["database"], bDE.sourceParams["collection"]);
+  elseif(haskey(bDE.sourceParams, "collection"))
+      collection = Mongo.MongoCollection(cg.mongo.client, _mongoDefaultDb, bDE.sourceParams["collection"]);
+  end
+
+  # 2. Check if the key exists...
   isNew = true;
-  if(bDE.id != "")
-    numNodes = count(cg.mongo.cgBindataCollection, ("cgId" => bDE.id)); #NOT the oid, this is another indexable list
+  if(bDE.sourceId != "")
+    numNodes = count(collection, ("cgId" => bDE.sourceId)); #NOT the oid, this is another indexable list
     isNew = numNodes == 0;
   end
   if(isNew)
-    # @show "Writing big data $(bDE.data)"
-    # Insert the node
-    m_oid = insert(cg.mongo.cgBindataCollection, ("cgId" =>  bDE.id, "sourceName" => bDE.sourceName, "description" => bDE.description, "data" => bDE.data, "mimeType" => bDE.mimeType, "neoNodeId" => bDE.neoNodeId, "lastSavedTimestamp" => saveTime))
-    info("Inserted big data to mongo id = $(m_oid) for cgId = $bDE.id")
+    # Insert the node (additional parameters for user readability, data is all that matters)
+    m_oid = insert(collection, ("cgId" =>  bDE.sourceId, "elementId" => bDE.id, "description" => bDE.description, "data" => bDE.data, "mimeType" => bDE.mimeType, "neoNodeId" => bDE.neoNodeId, "lastSavedTimestamp" => saveTime))
+    info("Inserted big data to mongo id = $(m_oid) for cgId = $(bDE.id)")
   else
     # Update the node
-    m_oid = update(cg.mongo.cgBindataCollection, ("cgId" => bDE.id), set("sourceName" => bDE.sourceName, "description" => bDE.description, "data" => bDE.data, "mimeType" => bDE.mimeType, "neoNodeId" => bDE.neoNodeId, "lastSavedTimestamp" => saveTime))
-    info("Updated big data to mongo id (result=$(m_oid)) (key $(bDE.id))")
+    m_oid = update(collection, ("cgId" => bDE.sourceId), set("elementId" => bDE.id, "description" => bDE.description, "data" => bDE.data, "mimeType" => bDE.mimeType, "neoNodeId" => bDE.neoNodeId, "lastSavedTimestamp" => saveTime))
+    info("Updated big data to mongo id (result=$(m_oid)) for cgId $(bDE.id)")
   end
   return(nothing)
 end
 
+# ------
+
 """
-    update_NeoBigData!(cg, vertex)
+    update_NeoBigDataEntries!(cg, vertex)
 
 Update the bigData dictionary elements in Neo4j. Does not insert or read from Mongo.
 """
-function update_NeoBigData!(cg::CloudGraph, vertex::CloudVertex)::Void
+function update_NeoBigDataEntries!(cg::CloudGraph, vertex::CloudVertex)::Void
   savedSets = Vector{savedSets = BigDataRawType}();
   for elem in vertex.bigData.dataElements
     # keep big data separate during Neo4j updates and remerge at end
@@ -68,24 +78,56 @@ function save_BigData!(cg::CloudGraph, vertex::CloudVertex)::Void
   end
 
   #Now update the Neo4j node.
-  update_NeoBigData!(cg, vertex)
+  update_NeoBigDataEntries!(cg, vertex)
   return(nothing)
 end
 
-function read_MongoData(cg::CloudGraph, id::String)::BigDataRawType
-  numNodes = count(cg.mongo.cgBindataCollection, ("cgId" => id));
-  if(numNodes != 1)
-      error("The query for $(id) returned $(numNodes) values, expected 1 result for this element!");
-  end
-  results = first(find(cg.mongo.cgBindataCollection, ("cgId" => id)))
-  #Have it, now parse it until we have a native binary or dictionary datatype.
-  # If new type, convert back to dictionary
-  if(typeof(results["data"]) == BSONObject)
-    testOutput = dict(results["data"]);
-    return convert(Dict{String, Any}, testOutput) #From {Any, Any} to a more comfortable stronger type
-  else
-    return results["data"];
-  end
+function read_MongoData(cg::CloudGraph, bDE::BigDataElement)::BigDataRawType
+    # 1. Get the collection name, if set...
+    collection = cg.mongo.cgBindataCollection
+    # DB customization for multitenancy
+    if(haskey(bDE.sourceParams, "database") && haskey(bDE.sourceParams, "collection"))
+        collection = Mongo.MongoCollection(cg.mongo.client, bDE.sourceParams["database"], bDE.sourceParams["collection"]);
+    elseif(haskey(bDE.sourceParams, "collection"))
+        collection = Mongo.MongoCollection(cg.mongo.client, _mongoDefaultDb, bDE.sourceParams["collection"]);
+    end
+
+    # 2. See if the element exists
+    numNodes = count(collection, ("cgId" => bDE.sourceId));
+    if(numNodes != 1)
+      error("The query for data elements named $(bDE.id) with Mongo CGID $(bDE.sourceId) returned $(numNodes) values, expected 1 result for this element!");
+    end
+    results = first(find(collection, ("cgId" => bDE.sourceId)))
+
+    #Have it, now parse it until we have a native binary or dictionary datatype.
+    # If new type, convert back to dictionary
+    if(typeof(results["data"]) == BSONObject)
+        testOutput = dict(results["data"]);
+        return convert(Dict{String, Any}, testOutput) #From {Any, Any} to a more comfortable stronger type
+    else
+        return results["data"];
+    end
+end
+
+function delete_MongoData(cg::CloudGraph, bDE::BigDataElement)::Void
+    # 1. Get the collection name, if set...
+    collection = cg.mongo.cgBindataCollection
+    # DB customization for multitenancy
+    if(haskey(bDE.sourceParams, "database") && haskey(bDE.sourceParams, "collection"))
+        collection = Mongo.MongoCollection(cg.mongo.client, bDE.sourceParams["database"], bDE.sourceParams["collection"]);
+    elseif(haskey(bDE.sourceParams, "collection"))
+        collection = Mongo.MongoCollection(cg.mongo.client, _mongoDefaultDb, bDE.sourceParams["collection"]);
+    end
+
+    # 2. See if the element exists
+    numNodes = count(collection, ("cgId" => bDE.sourceId));
+    if(numNodes != 1)
+      error("The query for data elements named $(bDE.id) with Mongo CGID $(bDE.sourceId) returned $(numNodes) values, expected 1 result for this element!");
+    end
+    delete(collection, ("cgId" => bDE.sourceId))
+    info("Deleted big data mongo id = $(bDE.sourceId) for cgId = $(bDE.id)")
+
+    return(nothing)
 end
 
 function read_BigData!(cg::CloudGraph, vertex::CloudVertex)::BigData
@@ -94,7 +136,7 @@ function read_BigData!(cg::CloudGraph, vertex::CloudVertex)::BigData
   end
   for bDE in vertex.bigData.dataElements
       #TODO: Handle the different source types.
-      bDE.data = read_MongoData(cg, bDE.id)
+      bDE.data = read_MongoData(cg, bDE)
   end
   vertex.bigData.isRetrieved = true
   return(vertex.bigData)
@@ -108,11 +150,10 @@ function delete_BigData!(cg::CloudGraph, vertex::CloudVertex)::Void
   vertex.bigData.isExistingOnServer = false
   # Delete the data.
   for bDE in vertex.bigData.dataElements
-    numNodes = count(cg.mongo.cgBindataCollection, ("cgId" => bDE.id));
-    info("delete_BigData! - The query for $(mongoId) returned $(numNodes) value(s).");
-    if(numNodes > 0)
-      delete(cg.mongo.cgBindataCollection, ("cgId" => bDE.id));
-    end
+      delete_MongoData(cg, bDE)
   end
+  # Delete the entries and update the indices
+  empty!(vertex.bigData.dataElements)
+  update_NeoBigDataEntries!(cg, vertex)
   return(nothing)
 end

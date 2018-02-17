@@ -6,24 +6,30 @@ export CloudGraphConfiguration, CloudGraph, CloudVertex, CloudEdge
 export BigData, BigDataElement
 export BigDataRawType
 
+_mongoDefaultDb = "CloudGraphs"
+_mongoDefaultCollection = "bindata"
+
 # Type aliases
 BigDataRawType = Union{Vector{UInt8}, Dict{String, Any}}
 
 mutable struct BigDataElement
-    sourceId::String
     sourceName::String
+    sourceId::String
+    sourceParams::Dict{String, Any}
     id::String
     description::String
     data::BigDataRawType
     mimeType::String
     neoNodeId::Int
     lastSavedTimestamp::String #UTC DateTime.
-    BigDataElement(id::String, desc::String, data::BigDataRawType, neoNodeId::Int; sourceName::String="Mongo", sourceId::String=string(Base.Random.uuid4()), mimeType::String="application/octet-stream", lastSavedTimestamp::String=string(now(Dates.UTC))) = new(sourceId, sourceName, id, desc, data, mimeType, neoNodeId, lastSavedTimestamp)
+    BigDataElement(id::String, desc::String, data::BigDataRawType, neoNodeId::Int; sourceName::String="Mongo", sourceId::String=string(Base.Random.uuid4()), sourceParams::Dict{String, Any}=Dict{String, Any}(), mimeType::String="application/octet-stream", lastSavedTimestamp::String=string(now(Dates.UTC))) = begin
+        return new(sourceName, sourceId, sourceParams, id, desc, data, mimeType, neoNodeId, lastSavedTimestamp)
+    end
     BigDataElement{T <: String}(dd::Dict{T,Any}, version::String) = begin
         if(version == "1")
-            return new(dd["mongoKey"], "Mongo", dd["mongoKey"], dd["description"], dd["data"], "application/octet-stream", dd["neoNodeId"], dd["lastSavedTimestamp"])
+            return new("Mongo", dd["mongoKey"], Dict{String, Any}(), dd["mongoKey"], dd["description"], dd["data"], "application/octet-stream", dd["neoNodeId"], dd["lastSavedTimestamp"])
         elseif(version == "2")
-            return new(dd["sourceId"], dd["sourceName"], dd["id"], dd["description"], dd["data"], dd["mimeType"], dd["neoNodeId"], dd["lastSavedTimestamp"])
+            return new(dd["sourceName"], dd["sourceId"], dd["sourceParams"], dd["id"], dd["description"], dd["data"], dd["mimeType"], dd["neoNodeId"], dd["lastSavedTimestamp"])
         else
             error("BigDataElement version '$version' is not supported.")
         end
@@ -61,7 +67,7 @@ mutable struct CloudVertex
   isValidNeoNodeId::Bool
   exVertexId::Int
   isValidExVertex::Bool
-  CloudVertex() = new(Union, Dict{UTF8String, Any}(), BigData(), -1, nothing, Vector{AbstractString}(), false, -1, false)
+  CloudVertex() = new(Union, Dict{AbstractString, Any}(), BigData(), -1, nothing, Vector{AbstractString}(), false, -1, false)
   CloudVertex{T <: AbstractString}(packed, properties, bigData::BigData, neo4jNodeId, neo4jNode, isValidNeoNodeId, exVertexId, isValidExVertex; labels::Vector{T}=Vector{String}()) = new(packed, properties, bigData, neo4jNodeId, neo4jNode, labels, isValidNeoNodeId, exVertexId, isValidExVertex)
   CloudVertex{T <: AbstractString}(packed, properties, bigData::T, neo4jNodeId, neo4jNode, isValidNeoNodeId, exVertexId, isValidExVertex; labels::Vector{T}=Vector{String}()) = new(packed, properties, BigData(bigData), neo4jNodeId, neo4jNode, labels, isValidNeoNodeId, exVertexId, isValidExVertex)
 end
