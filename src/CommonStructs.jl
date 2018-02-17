@@ -10,19 +10,20 @@ export BigDataRawType
 BigDataRawType = Union{Vector{UInt8}, Dict{String, Any}}
 
 mutable struct BigDataElement
-    id::String
+    sourceId::String
     sourceName::String
+    id::String
     description::String
     data::BigDataRawType
     mimeType::String
     neoNodeId::Int
     lastSavedTimestamp::String #UTC DateTime.
-    BigDataElement(sourceName::String, desc::String, data::BigDataRawType, neoNodeId::Int; id::String=string(Base.Random.uuid4()), mimeType::String="application/octet-stream", lastSavedTimestamp::String=string(now(Dates.UTC))) = new(id, sourceName, desc, data, mimeType, neoNodeId, lastSavedTimestamp)
+    BigDataElement(id::String, desc::String, data::BigDataRawType, neoNodeId::Int; sourceName::String="Mongo", sourceId::String=string(Base.Random.uuid4()), mimeType::String="application/octet-stream", lastSavedTimestamp::String=string(now(Dates.UTC))) = new(sourceId, sourceName, id, desc, data, mimeType, neoNodeId, lastSavedTimestamp)
     BigDataElement{T <: String}(dd::Dict{T,Any}, version::String) = begin
         if(version == "1")
-            return new(dd["mongoKey"], "Mongo", dd["description"], dd["data"], "application/octet-stream", dd["neoNodeId"], dd["lastSavedTimestamp"])
+            return new(dd["mongoKey"], "Mongo", dd["mongoKey"], dd["description"], dd["data"], "application/octet-stream", dd["neoNodeId"], dd["lastSavedTimestamp"])
         elseif(version == "2")
-            return new(dd["id"], dd["sourceName"], dd["description"], dd["data"], dd["mimeType"], dd["neoNodeId"], dd["lastSavedTimestamp"])
+            return new(dd["sourceId"], dd["sourceName"], dd["id"], dd["description"], dd["data"], dd["mimeType"], dd["neoNodeId"], dd["lastSavedTimestamp"])
         else
             error("BigDataElement version '$version' is not supported.")
         end
