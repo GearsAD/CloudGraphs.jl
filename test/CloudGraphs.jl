@@ -24,8 +24,8 @@ vertex.attributes["data"] = fullType;
 vertex.attributes["age"] = 64;
 vertex.attributes["latestEstimate"] = [0.0,0.0,0.0];
 bigData = CloudGraphs.BigData();
-testElementLegacy = CloudGraphs.BigDataElement("Mongo", "Performance test dataset legacy.", rand(UInt8,100), -1); #Data element
-testElementDict = CloudGraphs.BigDataElement("Mongo", "Performance test dataset new dict type.", Dict{String, Any}("testString"=>"Test String", "randUint8"=>rand(UInt8,100)), -1); #Data element
+testElementLegacy = CloudGraphs.BigDataElement("TestLegacy", "Performance test dataset legacy.", rand(UInt8,100), -1); #Data element
+testElementDict = CloudGraphs.BigDataElement("TestDictSet", "Performance test dataset new dict type.", Dict{String, Any}("testString"=>"Test String", "randUint8"=>rand(UInt8,100)), -1); #Data element
 append!(bigData.dataElements, [testElementLegacy, testElementDict]);
 vertex.attributes["bigData"] = bigData;
 # Now encoding the structure to CloudGraphs vertex
@@ -198,6 +198,12 @@ println("Success!")
 
 print("[TEST] Deleting nodes...")
 CloudGraphs.delete_vertex!(cloudGraph, cloudVert1)
+@test cloudVert1.neo4jNode == nothing
+@test cloudVert1.neo4jNodeId == -1
 CloudGraphs.delete_vertex!(cloudGraph, cloudVert2)
+@test cloudVert2.neo4jNode == nothing
+@test cloudVert2.neo4jNodeId == -1
 CloudGraphs.delete_vertex!(cloudGraph, cloudVert3)
+@test cloudVert3.neo4jNode == nothing
+@test cloudVert3.neo4jNodeId == -1
 println("Success!")

@@ -31,7 +31,7 @@ function connect(configuration::CloudGraphConfiguration)
   neo4j = Neo4jInstance(neoConn, Neo4j.getgraph(neoConn));
 
   mongoClient = configuration.mongoIsUsingCredentials ? Mongo.MongoClient(configuration.mongoHost, configuration.mongoPort, configuration.mongoUsername, configuration.mongoPassword) : Mongo.MongoClient(configuration.mongoHost, configuration.mongoPort)
-  cgBindataCollection = Mongo.MongoCollection(mongoClient, "CloudGraphs", "bindata");
+  cgBindataCollection = Mongo.MongoCollection(mongoClient, _mongoDefaultDb, _mongoDefaultCollection);
   mongoInstance = MongoDbInstance(mongoClient, cgBindataCollection);
 
   return CloudGraph(configuration, neo4j, mongoInstance);
@@ -243,7 +243,7 @@ function update_vertex!(cg::CloudGraph, vertex::CloudVertex, updateBigData::Bool
     # Update the BigData
     if(updateBigData)
         info("Updating bigData for node $(vertex.neo4jNodeId)...")
-        update_NeoBigData!(cg, vertex)
+        save_BigData!(cg, vertex)
     end
 
     return nothing
@@ -258,19 +258,21 @@ function delete_vertex!(cg::CloudGraph, vertex::CloudVertex)::Void
   end
 
   try
-    delete_BigData(cg, vertex)
+    delete_BigData!(cg, vertex)
   catch ex
     if(isa(ex, ErrorException))
-    warn("Unable to completely delete bigData for node $(neoNodeId) - $(ex)")
+        warn("Unable to completely delete bigData for node $(vertex.neo4jNodeId) - $(ex)")
+    else
+        error(ex)
     end
   end
 
   Neo4j.deletenode(vertex.neo4jNode);
 
-  vertex.neo4jNode = nothing;
-  vertex.neo4jNodeId = -1;
-  vertex.isValidNeoNodeId = false;
-  nothing;
+  vertex.neo4jNode = nothing
+  vertex.neo4jNodeId = -1
+  vertex.isValidNeoNodeId = false
+  return(nothing)
 end
 
 
