@@ -149,7 +149,13 @@ end
 
 function neoNode2CloudVertex(cg::CloudGraph, neoNode::Neo4j.Node)
   # Get the node properties.
-  recvOrigType = unpackNeoNodeData2UsrType(cg, neoNode)
+  recvOrigType = nothing
+  try
+      recvOrigType = unpackNeoNodeData2UsrType(cg, neoNode)
+  catch err
+      println("Could not convert packed type, please check your conversion function.")
+      error(err)
+  end
   props = neoNode.data;
 
   # Big data
@@ -182,7 +188,7 @@ function neoNode2CloudVertex(cg::CloudGraph, neoNode::Neo4j.Node)
   exvid = props["exVertexId"]
   delete!(props, "exVertexId")
 
-  # Build a CloudGraph node.
+  # Build a CloudGraph nrecvOrigTypeode.
   return CloudVertex(recvOrigType, props, bigData, neoNode.metadata["id"], neoNode, true, exvid, false; labels=labels);
 end
 
