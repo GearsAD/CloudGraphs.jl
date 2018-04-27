@@ -58,6 +58,18 @@ facts("BigData testing") do
     end
 
     # Saving an image as binary in a separate collection
+    context("Saving a raw string...") do
+        cloudVertex = CloudGraphs.get_vertex(cloudGraph, cloudNodeId, true) # fullType not required
+
+        sourceParams = Dict{String, Any}("database" => "TestCGRepo", "collection" => "RawImages")
+        testElementString = CloudGraphs.BigDataElement("TestString", "String test! Lots of lorem ipsums", "String test! Lots of lorem ipsums", -1, mimeType="application/text");
+        push!(cloudVertex.bigData.dataElements, testElementString);
+        update_vertex!(cloudGraph, cloudVertex, true)
+        # Reading it back to see if all is good
+        bDEData = read_MongoData(cloudGraph, testElementString)
+        @fact testElementString.data --> bDEData
+
+    # Saving an image as binary in a separate collection
     context("Saving an image to a custom database/collection...") do
         cloudVertex = CloudGraphs.get_vertex(cloudGraph, cloudNodeId, true) # fullType not required
         fid = open(dirname(Base.source_path()) * "/IMG_1407.JPG","r")

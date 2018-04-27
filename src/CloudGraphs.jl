@@ -359,13 +359,17 @@ end
 
 function get_neighbors(cg::CloudGraph, vert::CloudVertex; incoming::Bool=true, outgoing::Bool=true, needdata::Bool=false)
   if(vert.neo4jNode == nothing)
-    error("The provided vertex does not have it's associated Neo4j Node (vertex.neo4jNode) - please perform a get_vertex to get the complete structure first.")
+    error("The provided vertex does not have its associated Neo4j Node (vertex.neo4jNode) - please perform a get_vertex to get the complete structure first.")
   end
 
-  neo4jNeighbors = Neo4j.getneighbors(vert.neo4jNode, incoming=incoming, outgoing=outgoing)
+  loadtx = transaction(cg.neo4j.connection)
+  query = "match (node)-[:DEPENDENCE]-(another) where id(node) = $(vert.neo4jNodeId) return id(another)";
+  nodes = loadtx(query; submit=true)
+  nodes = map(node -> getnode(cg.neo4j.graph, node["row"][1]), nodes.results[1]["data"])
+  commit(loadtx)
 
   neighbors = CloudVertex[]
-  for neoNeighbor in neo4jNeighbors
+  for neoNeighbor in nodes
     if !haskey(neoNeighbor.data, "data") && needdata
       warn("skip neighbor if not in the subgraph segment of interest, neonodeid=$(neoNeighbor.id)")
       continue;
