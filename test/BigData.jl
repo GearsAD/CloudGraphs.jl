@@ -10,7 +10,22 @@ facts("BigData testing") do
         typeOriginalRegName = string(DataTest);
         # Now lets encode and decode to see.
         testPackedType = cloudGraph.packedOriginalDataTypes[typeOriginalRegName].encodingFunction(PackedDataTest, fullType);
+
+        ## Dropping the type registration requirement
+        # fnc = IncrementalInference.getfnctype(fgl, fid)
+        # usrtyp = convert(PackedInferenceType, fnc)
+        # cfnd = convert(PackedFunctionNodeData{usrtyp},getData(fgl, fid) )
+
         testFullType = cloudGraph.packedPackedDataTypes[typePackedRegName].decodingFunction(DataTest, testPackedType);
+
+        ## Dropping the type registration requirement
+        # fnc = getData(fgl, fid).fnc #getfnctype(fgl, fid)
+        # usrtyp = convert(FunctorInferenceType, fnc)
+        # data = getData(fgl, fid, api=api)
+        # newtype = FunctionNodeData{GenericWrapParam{usrtyp}}
+        # cfnd = convert(newtype, data)
+
+
         @fact json(testFullType) --> json(fullType)
     end
 

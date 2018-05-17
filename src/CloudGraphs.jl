@@ -38,7 +38,13 @@ function connect(configuration::CloudGraphConfiguration)
 end
 
 # Register a type with an optional converter.
-function registerPackedType!(cloudGraph::CloudGraph, originalType::DataType, packedType::DataType; encodingConverter::Union{Function, Union}=Union{}, decodingConverter::Union{Function, Union}=Union{})
+function registerPackedType!(
+            cloudGraph::CloudGraph,
+            originalType::DataType,
+            packedType::DataType;
+            encodingConverter::Union{Function, Void}=nothing,
+            decodingConverter::Union{Function, Void}=nothing  )
+  #
   newPackedType = PackedType(originalType, packedType, encodingConverter, decodingConverter);
   cloudGraph.packedPackedDataTypes[string(packedType)] = newPackedType;
   cloudGraph.packedOriginalDataTypes[string(originalType)] = newPackedType;
