@@ -107,10 +107,13 @@ mutable struct CloudGraph
   configuration::CloudGraphConfiguration
   neo4j::Neo4jInstance
   mongo::MongoDbInstance
+  encodePackedType::Function
+  getpackedtype::Function
+  decodePackedType::Function
   packedPackedDataTypes::Dict{AbstractString, PackedType}
   packedOriginalDataTypes::Dict{AbstractString, PackedType}
-  CloudGraph(configuration, neo4j, mongo) = new(configuration, neo4j, mongo, Dict{AbstractString, PackedType}(), Dict{AbstractString, PackedType}())
-  CloudGraph(configuration, neo4j, mongo, packedDataTypes, originalDataTypes) = new(configuration, neo4j, mongo, packedDataTypes, originalDataTypes)
+  CloudGraph(configuration, neo4j, mongo, ept, gpt, dpt) = new(configuration, neo4j, mongo, ept, gpt, dpt, Dict{AbstractString, PackedType}(), Dict{AbstractString, PackedType}())
+  CloudGraph(configuration, neo4j, mongo, ept, gpt, dpt, packedDataTypes, originalDataTypes) = new(configuration, neo4j, mongo, ept, gpt, dpt, packedDataTypes, originalDataTypes)
 end
 
 mutable struct CloudEdge

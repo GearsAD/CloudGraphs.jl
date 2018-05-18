@@ -1,18 +1,26 @@
-using Base.Test, FactCheck
+using Base: Test
+using FactCheck # to be deprecated
 using Graphs
 using ProtoBuf
 using JSON
 using CloudGraphs
 using LibBSON
 
+import Base: convert
+
 # Have we loaded the library?
 @test isdefined(:CloudGraphs) == true
 @test typeof(CloudGraphs) == Module
 
+function testgetfnctype(x...)
+  @show x
+  error("CloudGraphSetup.jl:testgetfnctype(x...)  not implemented yet")
+end
+
 # Creating a connection
 print("[TEST] Connecting to the local CloudGraphs instance (Neo4j and Mongo)...");
-configuration = CloudGraphs.CloudGraphConfiguration("localhost", 7474, "neo4j", "neo5j", "localhost", 27017, false, "", "");
-cloudGraph = connect(configuration);
+configuration = CloudGraphs.CloudGraphConfiguration("localhost", 7474, "neo4j", "marine", "localhost", 27017, false, "", "");
+cloudGraph = connect(configuration, encodePackedType, getpackedtype, decodePackedType); # TODO IIF.encodePackedType
 println("Success!");
 
 # Testing type registration
@@ -38,10 +46,10 @@ type PackedDataTest
                                   size(d.boolmatrix,1))
 end
 
-function encoder(::Type{PackedDataTest}, d::DataTest)
+function convert(::Type{PackedDataTest}, d::DataTest) # encoder
   return PackedDataTest(d)
 end
-function decoder(T::Type{DataTest}, d::PackedDataTest)
+function convert(T::Type{DataTest}, d::PackedDataTest) # decoder
   r1 = d.matrows
   c1 = floor(Int,length(d.vecmat)/r1)
   M1 = reshape(d.vecmat,r1,c1)
@@ -53,7 +61,7 @@ end
 
 println("[TEST] Registering a packed type and testing the Protobuf encoding/decoding...");
 # Let's register a packed type.
-CloudGraphs.registerPackedType!(cloudGraph, DataTest, PackedDataTest, encodingConverter=encoder, decodingConverter=decoder);
+CloudGraphs.registerPackedType!(cloudGraph, DataTest, PackedDataTest, encodingConverter=convert, decodingConverter=convert);
 println("Registered types = $(cloudGraph.packedPackedDataTypes)");
 println("Registered types = $(cloudGraph.packedOriginalDataTypes)");
 @test length(cloudGraph.packedPackedDataTypes) > 0
