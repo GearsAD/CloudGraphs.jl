@@ -45,6 +45,7 @@ function registerPackedType!(
             encodingConverter::Union{Function, Void}=nothing,
             decodingConverter::Union{Function, Void}=nothing  )
   #
+  error("Obsolete, DO NOT use type registration -- dispatch automatically used instead!!!")
   newPackedType = PackedType(originalType, packedType, encodingConverter, decodingConverter);
   cloudGraph.packedPackedDataTypes[string(packedType)] = newPackedType;
   cloudGraph.packedOriginalDataTypes[string(originalType)] = newPackedType;
@@ -153,8 +154,8 @@ function unpackNeoNodeData2UsrType(cg::CloudGraph, neoNode::Neo4j.Node)
 
   typePackedRegName = props["packedType"];
 
-  @show packedtype = cg.packedPackedDataTypes[typePackedRegName].packingType()
-  @show packedtype = cg.getpackedtype(typePackedRegName) # combine in DFG, ProtoBuf
+  # @show packedtype = cg.packedPackedDataTypes[typePackedRegName].packingType()
+  packedtype = cg.getpackedtype(typePackedRegName) # combine in DFG, ProtoBuf
   packed = readproto(pB, packedtype); # TODO should be moved to common DIstributedFactorGraphs.jl
   fulltype = cg.decodePackedType(packed,typePackedRegName) # combine in DFG, ProtoBuf
   # origtypedef = cg.packedPackedDataTypes[typePackedRegName].originalType
