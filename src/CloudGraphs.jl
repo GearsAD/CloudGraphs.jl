@@ -3,12 +3,12 @@ module CloudGraphs
 import Graphs: add_edge!, add_vertex!
 import Base: connect
 
-using Graphs;
-using Neo4j;
-using Mongo;
-using LibBSON;
-using ProtoBuf;
-using JSON;
+using Graphs
+using Neo4j
+using Mongo
+using LibBSON
+using ProtoBuf
+using JSON
 
 # extending methods
 
@@ -35,21 +35,6 @@ function connect(configuration::CloudGraphConfiguration, encodefnc::Function, gp
   mongoInstance = MongoDbInstance(mongoClient, cgBindataCollection);
 
   return CloudGraph(configuration, neo4j, mongoInstance, encodefnc, gpt, dpt);
-end
-
-# Register a type with an optional converter.
-function registerPackedType!(
-            cloudGraph::CloudGraph,
-            originalType::DataType,
-            packedType::DataType;
-            encodingConverter::Union{Function, Void}=nothing,
-            decodingConverter::Union{Function, Void}=nothing  )
-  #
-  error("Obsolete, DO NOT use type registration -- dispatch automatically used instead!!!")
-  newPackedType = PackedType(originalType, packedType, encodingConverter, decodingConverter);
-  cloudGraph.packedPackedDataTypes[string(packedType)] = newPackedType;
-  cloudGraph.packedOriginalDataTypes[string(originalType)] = newPackedType;
-  nothing;
 end
 
 # --- CloudGraph shutdown ---
@@ -108,16 +93,6 @@ function cloudVertex2NeoProps(cg::CloudGraph, vertex::CloudVertex)
       ProtoBuf.writeproto(pB, packedType); # vertex.packed
       typeKey = string(typeof(packedType));
 
-      # if(haskey(cg.packedOriginalDataTypes, string(typeof(vertex.packed)) ) ) # @GearsAD check, it was cg.convertTypes
-      #   typeOriginalRegName = string(typeof(vertex.packed));
-      #   packingtypedef = cg.packedOriginalDataTypes[typeOriginalRegName].packingType
-      #   packedType = cg.packedOriginalDataTypes[typeOriginalRegName].encodingFunction(packingtypedef, vertex.packed);
-      #
-      #   ProtoBuf.writeproto(pB, packedType); # vertex.packed
-      #   typeKey = string(typeof(packedType));
-      # else
-      #   error("CloudGraphs: conversion error of packedOriginalDataTypes $(typeof(vertex.packed))")
-      # end
       props["data"] = pB.data;
       props["packedType"] = typeKey;
   end
@@ -158,8 +133,6 @@ function unpackNeoNodeData2UsrType(cg::CloudGraph, neoNode::Neo4j.Node)
   packedtype = cg.getpackedtype(typePackedRegName) # combine in DFG, ProtoBuf
   packed = readproto(pB, packedtype); # TODO should be moved to common DIstributedFactorGraphs.jl
   fulltype = cg.decodePackedType(packed,typePackedRegName) # combine in DFG, ProtoBuf
-  # origtypedef = cg.packedPackedDataTypes[typePackedRegName].originalType
-  # cg.packedPackedDataTypes[typePackedRegName].decodingFunction(origtypedef, packed)
   return fulltype
 end
 
