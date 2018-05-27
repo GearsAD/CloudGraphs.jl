@@ -85,35 +85,38 @@ struct CloudGraphConfiguration
   mongoPassword::AbstractString # UTF8String
 end
 
-type Neo4jInstance
+mutable struct Neo4jInstance
   connection::Neo4j.Connection
   graph::Neo4j.Graph
 end
 
-type MongoDbInstance
+mutable struct MongoDbInstance
   client::Mongo.MongoClient
   cgBindataCollection::MongoCollection
 end
 
-type PackedType
+mutable struct PackedType
   originalType::Type
   packingType::Type
-  encodingFunction::Union{Function, Union}
-  decodingFunction::Union{Function, Union}
+  encodingFunction::Union{Function, Void}
+  decodingFunction::Union{Function, Void}
 end
 
 # A CloudGraph instance
-type CloudGraph
+mutable struct CloudGraph
   configuration::CloudGraphConfiguration
   neo4j::Neo4jInstance
   mongo::MongoDbInstance
+  encodePackedType::Function
+  getpackedtype::Function
+  decodePackedType::Function
   packedPackedDataTypes::Dict{AbstractString, PackedType}
   packedOriginalDataTypes::Dict{AbstractString, PackedType}
-  CloudGraph(configuration, neo4j, mongo) = new(configuration, neo4j, mongo, Dict{AbstractString, PackedType}(), Dict{AbstractString, PackedType}())
-  CloudGraph(configuration, neo4j, mongo, packedDataTypes, originalDataTypes) = new(configuration, neo4j, mongo, packedDataTypes, originalDataTypes)
+  CloudGraph(configuration, neo4j, mongo, ept, gpt, dpt) = new(configuration, neo4j, mongo, ept, gpt, dpt, Dict{AbstractString, PackedType}(), Dict{AbstractString, PackedType}())
+  CloudGraph(configuration, neo4j, mongo, ept, gpt, dpt, packedDataTypes, originalDataTypes) = new(configuration, neo4j, mongo, ept, gpt, dpt, packedDataTypes, originalDataTypes)
 end
 
-type CloudEdge
+mutable struct CloudEdge
   neo4jEdgeId::Int
   neo4jEdge::Union{Void,Neo4j.Relationship}
   edgeType::AbstractString #UTF8String

@@ -1,8 +1,6 @@
 #Functions
 export save_BigData!, read_BigData!, update_NeoBigDataEntries!, read_MongoData, delete_MongoData
 
-include("CommonStructs.jl")
-
 # --- Internal utility methods ---
 
 """

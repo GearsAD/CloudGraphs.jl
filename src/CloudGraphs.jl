@@ -1,13 +1,14 @@
 module CloudGraphs
 
 import Graphs: add_edge!, add_vertex!
+import Base: connect
 
-using Graphs;
-using Neo4j;
-using Mongo;
-using LibBSON;
-using ProtoBuf;
-using JSON;
+using Graphs
+using Neo4j
+using Mongo
+using LibBSON
+using ProtoBuf
+using JSON
 
 # extending methods
 
@@ -24,9 +25,8 @@ include("BigData.jl")
 # WHenever bigData is saved, we upgrade it to the latest version.
 BIGDATA_CURVERSION = "2"
 
-import Base.connect
 # --- CloudGraph initialization ---
-function connect(configuration::CloudGraphConfiguration)
+function connect(configuration::CloudGraphConfiguration, encodefnc::Function, gpt::Function, dpt::Function)
   neoConn = Neo4j.Connection(configuration.neo4jHost, port=configuration.neo4jPort, user=configuration.neo4jUsername, password=configuration.neo4jPassword);
   neo4j = Neo4jInstance(neoConn, Neo4j.getgraph(neoConn));
 
@@ -34,15 +34,7 @@ function connect(configuration::CloudGraphConfiguration)
   cgBindataCollection = Mongo.MongoCollection(mongoClient, _mongoDefaultDb, _mongoDefaultCollection);
   mongoInstance = MongoDbInstance(mongoClient, cgBindataCollection);
 
-  return CloudGraph(configuration, neo4j, mongoInstance);
-end
-
-# Register a type with an optional converter.
-function registerPackedType!(cloudGraph::CloudGraph, originalType::DataType, packedType::DataType; encodingConverter::Union{Function, Union}=Union{}, decodingConverter::Union{Function, Union}=Union{})
-  newPackedType = PackedType(originalType, packedType, encodingConverter, decodingConverter);
-  cloudGraph.packedPackedDataTypes[string(packedType)] = newPackedType;
-  cloudGraph.packedOriginalDataTypes[string(originalType)] = newPackedType;
-  nothing;
+  return CloudGraph(configuration, neo4j, mongoInstance, encodefnc, gpt, dpt);
 end
 
 # --- CloudGraph shutdown ---
@@ -94,18 +86,13 @@ function cloudVertex2NeoProps(cg::CloudGraph, vertex::CloudVertex)
   if(vertex.packed != "")
       # Packed information
       pB = PipeBuffer();
-      # ProtoBuf.writeproto(pB, vertex.packed);
-      typeKey="NoType"
+      # typeKey="NoType"
 
-      if(haskey(cg.packedOriginalDataTypes, string(typeof(vertex.packed)) ) ) # @GearsAD check, it was cg.convertTypes
-        typeOriginalRegName = string(typeof(vertex.packed));
-        packingtypedef = cg.packedOriginalDataTypes[typeOriginalRegName].packingType
-        packedType = cg.packedOriginalDataTypes[typeOriginalRegName].encodingFunction(packingtypedef, vertex.packed);
-        ProtoBuf.writeproto(pB, packedType); # vertex.packed
-        typeKey = string(typeof(packedType));
-      else
-        error("CloudGraphs doesn't know how to convert packedOriginalDataTypes $(typeof(vertex.packed))")
-      end
+      ## Dropping the type registration requirement
+      packedType = cg.encodePackedType(vertex.packed)
+      ProtoBuf.writeproto(pB, packedType); # vertex.packed
+      typeKey = string(typeof(packedType));
+
       props["data"] = pB.data;
       props["packedType"] = typeKey;
   end
@@ -142,20 +129,23 @@ function unpackNeoNodeData2UsrType(cg::CloudGraph, neoNode::Neo4j.Node)
 
   typePackedRegName = props["packedType"];
 
-  packed = readproto(pB, cg.packedPackedDataTypes[typePackedRegName].packingType() );
-  origtypedef = cg.packedPackedDataTypes[typePackedRegName].originalType
-  cg.packedPackedDataTypes[typePackedRegName].decodingFunction(origtypedef, packed);
+  # @show packedtype = cg.packedPackedDataTypes[typePackedRegName].packingType()
+  packedtype = cg.getpackedtype(typePackedRegName) # combine in DFG, ProtoBuf
+  packed = readproto(pB, packedtype); # TODO should be moved to common DIstributedFactorGraphs.jl
+  fulltype = cg.decodePackedType(packed,typePackedRegName) # combine in DFG, ProtoBuf
+  return fulltype
 end
+
 
 function neoNode2CloudVertex(cg::CloudGraph, neoNode::Neo4j.Node)
   # Get the node properties.
   recvOrigType = nothing
-  try
+  # try
       recvOrigType = unpackNeoNodeData2UsrType(cg, neoNode)
-  catch err
-      println("Could not convert packed type, please check your conversion function.")
-      error(err)
-  end
+  # catch err
+  #     println("Could not convert packed type, please check your conversion function.")
+  #     error(err)
+  # end
   props = neoNode.data;
 
   # Big data

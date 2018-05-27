@@ -1,18 +1,26 @@
 # Setup everything using the common setup.
 include("CloudGraphSetup.jl")
 
+@testset "Encoding and decoding of packed data types" begin
+    # And check that if we encode and decode this type, it's exactly the same.
+    # Make a packed data test structure.
+    fullType = DataTest(rand(10,10), "This is a test string", rand(Int32,10,10));
+    typePackedRegName = string(PackedDataTest);
+    typeOriginalRegName = string(DataTest);
+    # Now lets encode and decode to see.
+    testPackedType = cloudGraph.packedOriginalDataTypes[typeOriginalRegName].encodingFunction(PackedDataTest, fullType);
+    testPackedType_c = convert(PackedDataTest, fullType)
+
+    testFullType = cloudGraph.packedPackedDataTypes[typePackedRegName].decodingFunction(DataTest, testPackedType);
+    testFullType_c = convert(DataTest, testPackedType_c)
+
+    @test json(testFullType) == json(fullType)
+    @test json(testFullType_c) == json(fullType)
+end
+
+
+
 facts("BigData testing") do
-    context("Encoding and decoding of packed data types") do
-        # And check that if we encode and decode this type, it's exactly the same.
-        # Make a packed data test structure.
-        fullType = DataTest(rand(10,10), "This is a test string", rand(Int32,10,10));
-        typePackedRegName = string(PackedDataTest);
-        typeOriginalRegName = string(DataTest);
-        # Now lets encode and decode to see.
-        testPackedType = cloudGraph.packedOriginalDataTypes[typeOriginalRegName].encodingFunction(PackedDataTest, fullType);
-        testFullType = cloudGraph.packedPackedDataTypes[typePackedRegName].decodingFunction(DataTest, testPackedType);
-        @fact json(testFullType) --> json(fullType)
-    end
 
     cloudVertex = CloudGraphs.CloudVertex()
     context("Creating a CloudVertex from an ExVertex with bigdata elements...") do
