@@ -26,7 +26,10 @@ include("BigData.jl")
 BIGDATA_CURVERSION = "2"
 
 # --- CloudGraph initialization ---
-function connect(configuration::CloudGraphConfiguration, encodefnc::Function, gpt::Function, dpt::Function)
+function connect(configuration::CloudGraphConfiguration,
+            encodefnc::Function,
+            gpt::Function,
+            dpt::Function  )
   neoConn = Neo4j.Connection(configuration.neo4jHost, port=configuration.neo4jPort, user=configuration.neo4jUsername, password=configuration.neo4jPassword);
   neo4j = Neo4jInstance(neoConn, Neo4j.getgraph(neoConn));
 
