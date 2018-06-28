@@ -24,14 +24,14 @@ cloudGraph = connect(configuration, encodePackedType, getpackedtype, decodePacke
 println("Success!");
 
 # Testing type registration
-type DataTest
+mutable struct DataTest
   matrix::Array{Float64, 2}
   string::AbstractString #ASCIIString
   boolmatrix::Array{Int32,2}
   DataTest() = new()
   DataTest(m,s,b) = new(m,s,b)
 end
-type PackedDataTest
+mutable struct PackedDataTest
   vecmat::Vector{Float64}
   matrows::Int64
   string::AbstractString #ASCIIString
