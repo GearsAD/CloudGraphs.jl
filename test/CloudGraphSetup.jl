@@ -20,8 +20,9 @@ end
 # Creating a connection
 @testset "[TEST] Connecting to the local CloudGraphs instance (Neo4j and Mongo)..." begin
 
-configuration = CloudGraphs.CloudGraphConfiguration("localhost", 7474, "neo4j", "marine", "localhost", 27017, false, "", "");
+configuration = CloudGraphs.CloudGraphConfiguration("localhost", 7474, ENV["NEO4JUN"], ENV["NEO4JPW"], "localhost", 27017, false, "", "");
 # TODO replicate IIF.encodePackedType
+
 cloudGraph = connect(configuration, encodePackedType, getpackedtype, decodePackedType);
 # cloudGraph = connect(configuration, IncrementalInference.encodePackedType, Caesar.getpackedtype, IncrementalInference.decodePackedType);
 println("Success!");
