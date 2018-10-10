@@ -1,6 +1,6 @@
 julia 0.6
 Graphs 0.10.1
-Neo4j 1.0.0
+Neo4j 2.0.0
 Mongo
 LibBSON
 ProtoBuf

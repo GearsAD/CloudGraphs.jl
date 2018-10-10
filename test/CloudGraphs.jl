@@ -8,9 +8,14 @@ typePackedRegName = string(PackedDataTest);
 typeOriginalRegName = string(DataTest);
 # Now lets encode and decode to see.
 println("Encoding...")
-testPackedType = cloudGraph.packedOriginalDataTypes[typeOriginalRegName].encodingFunction(PackedDataTest, fullType);
+testPackedType = convert(PackedDataTest, fullType);
+# testPackedType = cloudGraph.packedOriginalDataTypes[typeOriginalRegName].encodingFunction(PackedDataTest, fullType);
+
 println("Decoding...")
-testFullType = cloudGraph.packedPackedDataTypes[typePackedRegName].decodingFunction(DataTest, testPackedType);
+testFullType = convert(DataTest, testPackedType);
+# testFullType = cloudGraph.packedPackedDataTypes[typePackedRegName].decodingFunction(DataTest, testPackedType);
+
+
 @test json(testFullType) == json(fullType)
 println("Success!")
 

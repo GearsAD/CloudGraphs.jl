@@ -1,7 +1,7 @@
 using CloudGraphs
-using Base.Test
+using Test
 
-@test isdefined(:CloudGraphs) == true
+@test isdefined(:CloudGraphs)
 @test typeof(CloudGraphs) == Module
 
 #include("QuickPackProtoTest.jl")
@@ -16,4 +16,4 @@ else
 end
 
 # Return the true exit status from FactCheck
-FactCheck.exitstatus()
+# FactCheck.exitstatus()

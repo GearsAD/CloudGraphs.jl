@@ -1,5 +1,5 @@
 using Base: Test
-using FactCheck # to be deprecated
+# using FactCheck # to be deprecated
 using Graphs
 using ProtoBuf
 using JSON
@@ -18,20 +18,25 @@ function testgetfnctype(x...)
 end
 
 # Creating a connection
-print("[TEST] Connecting to the local CloudGraphs instance (Neo4j and Mongo)...");
+@testset "[TEST] Connecting to the local CloudGraphs instance (Neo4j and Mongo)..." begin
+
 configuration = CloudGraphs.CloudGraphConfiguration("localhost", 7474, "neo4j", "marine", "localhost", 27017, false, "", "");
-cloudGraph = connect(configuration, encodePackedType, getpackedtype, decodePackedType); # TODO IIF.encodePackedType
+# TODO replicate IIF.encodePackedType
+cloudGraph = connect(configuration, encodePackedType, getpackedtype, decodePackedType);
+# cloudGraph = connect(configuration, IncrementalInference.encodePackedType, Caesar.getpackedtype, IncrementalInference.decodePackedType);
 println("Success!");
 
+end
+
 # Testing type registration
-type DataTest
+mutable struct DataTest
   matrix::Array{Float64, 2}
   string::AbstractString #ASCIIString
   boolmatrix::Array{Int32,2}
   DataTest() = new()
   DataTest(m,s,b) = new(m,s,b)
 end
-type PackedDataTest
+mutable struct PackedDataTest
   vecmat::Vector{Float64}
   matrows::Int64
   string::AbstractString #ASCIIString
@@ -59,10 +64,10 @@ function convert(T::Type{DataTest}, d::PackedDataTest) # decoder
   return DataTest(M1,d.string,M2)
 end
 
-println("[TEST] Registering a packed type and testing the Protobuf encoding/decoding...");
+# println("[TEST] Registering a packed type and testing the Protobuf encoding/decoding...");
 # Let's register a packed type.
-CloudGraphs.registerPackedType!(cloudGraph, DataTest, PackedDataTest, encodingConverter=convert, decodingConverter=convert);
-println("Registered types = $(cloudGraph.packedPackedDataTypes)");
-println("Registered types = $(cloudGraph.packedOriginalDataTypes)");
-@test length(cloudGraph.packedPackedDataTypes) > 0
-@test length(cloudGraph.packedOriginalDataTypes) > 0
+# CloudGraphs.registerPackedType!(cloudGraph, DataTest, PackedDataTest, encodingConverter=convert, decodingConverter=convert);
+# println("Registered types = $(cloudGraph.packedPackedDataTypes)");
+# println("Registered types = $(cloudGraph.packedOriginalDataTypes)");
+# @test length(cloudGraph.packedPackedDataTypes) > 0
+# @test length(cloudGraph.packedOriginalDataTypes) > 0
