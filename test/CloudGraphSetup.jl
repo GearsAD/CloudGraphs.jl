@@ -1,5 +1,5 @@
-using Base: Test
-using FactCheck # to be deprecated
+using Test
+using Neo4j
 using Graphs
 using ProtoBuf
 using JSON
@@ -12,26 +12,15 @@ import Base: convert
 @test isdefined(:CloudGraphs) == true
 @test typeof(CloudGraphs) == Module
 
-function testgetfnctype(x...)
-  @show x
-  error("CloudGraphSetup.jl:testgetfnctype(x...)  not implemented yet")
-end
-
-# Creating a connection
-print("[TEST] Connecting to the local CloudGraphs instance (Neo4j and Mongo)...");
-configuration = CloudGraphs.CloudGraphConfiguration("localhost", 7474, "neo4j", "marine", "localhost", 27017, false, "", "");
-cloudGraph = connect(configuration, encodePackedType, getpackedtype, decodePackedType); # TODO IIF.encodePackedType
-println("Success!");
-
 # Testing type registration
-type DataTest
+mutable struct DataTest
   matrix::Array{Float64, 2}
   string::AbstractString #ASCIIString
   boolmatrix::Array{Int32,2}
   DataTest() = new()
   DataTest(m,s,b) = new(m,s,b)
 end
-type PackedDataTest
+mutable struct PackedDataTest
   vecmat::Vector{Float64}
   matrows::Int64
   string::AbstractString #ASCIIString
@@ -59,10 +48,30 @@ function convert(T::Type{DataTest}, d::PackedDataTest) # decoder
   return DataTest(M1,d.string,M2)
 end
 
-println("[TEST] Registering a packed type and testing the Protobuf encoding/decoding...");
-# Let's register a packed type.
-CloudGraphs.registerPackedType!(cloudGraph, DataTest, PackedDataTest, encodingConverter=convert, decodingConverter=convert);
-println("Registered types = $(cloudGraph.packedPackedDataTypes)");
-println("Registered types = $(cloudGraph.packedOriginalDataTypes)");
-@test length(cloudGraph.packedPackedDataTypes) > 0
-@test length(cloudGraph.packedOriginalDataTypes) > 0
+# Highly simplified packers and unpackers for testing.
+function testEncodePackedType(a::DataTest)
+  return PackedDataTest(a)
+end
+function testGetpackedtype(a::Any)
+  return PackedDataTest()
+end
+function testDecodePackedType(a::Any, b::Any)
+  return convert(DataTest, a)
+end
+
+# Defaults
+if !haskey(ENV, "NEO4JUN")
+    ENV["NEO4JUN"] = "neo4j"
+end
+if !haskey(ENV, "NEO4JPW")
+    ENV["NEO4JPW"] = "neo5j"
+end
+if !haskey(ENV, "MONGOUN")
+    ENV["MONGOUN"] = ""
+end
+if !haskey(ENV, "MONGOPW")
+    ENV["MONGOPW"] = ""
+end
+configuration = CloudGraphs.CloudGraphConfiguration("localhost", 7474, ENV["NEO4JUN"], ENV["NEO4JPW"], "localhost", 27017, false, ENV["MONGOUN"], ENV["MONGOPW"]);
+cloudGraph = connect(configuration, testEncodePackedType, testGetpackedtype, testDecodePackedType);
+println("Success!");

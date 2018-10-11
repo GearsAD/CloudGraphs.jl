@@ -1,7 +1,6 @@
 module CloudGraphs
 
 import Graphs: add_edge!, add_vertex!
-import Base: connect
 
 using Graphs
 using Neo4j
@@ -9,6 +8,7 @@ using Mongo
 using LibBSON
 using ProtoBuf
 using JSON
+using Dates
 
 # extending methods
 
@@ -43,7 +43,7 @@ function disconnect(cloudGraph::CloudGraph)
 end
 
 # --- Common conversion functions ---
-function exVertex2CloudVertex(vertex::ExVertex)
+function exVertex2CloudVertex(vertex::ExVertex)::CloudVertex
   cgvProperties = Dict{String, Any}();
 
   #1. Get the special attributes - payload, etc.
@@ -68,7 +68,7 @@ function exVertex2CloudVertex(vertex::ExVertex)
   return CloudVertex(packed, cgvProperties, bigData, -1, nothing, false, vertex.index, false);
 end
 
-function cloudVertex2ExVertex(vertex::CloudVertex)
+function cloudVertex2ExVertex(vertex::CloudVertex)::Graphs.ExVertex
   # create an ExVertex
   vert = Graphs.ExVertex(vertex.exVertexId, vertex.properties["label"])
   vert.attributes = Graphs.AttributeDict()
@@ -86,7 +86,6 @@ function cloudVertex2NeoProps(cg::CloudGraph, vertex::CloudVertex)
   if(vertex.packed != "")
       # Packed information
       pB = PipeBuffer();
-      # typeKey="NoType"
 
       ## Dropping the type registration requirement
       packedType = cg.encodePackedType(vertex.packed)
@@ -128,8 +127,6 @@ function unpackNeoNodeData2UsrType(cg::CloudGraph, neoNode::Neo4j.Node)
   pB = PipeBuffer(pData);
 
   typePackedRegName = props["packedType"];
-
-  # @show packedtype = cg.packedPackedDataTypes[typePackedRegName].packingType()
   packedtype = cg.getpackedtype(typePackedRegName) # combine in DFG, ProtoBuf
   packed = readproto(pB, packedtype); # TODO should be moved to common DIstributedFactorGraphs.jl
   fulltype = cg.decodePackedType(packed,typePackedRegName) # combine in DFG, ProtoBuf
@@ -353,7 +350,7 @@ function get_neighbors(cg::CloudGraph, vert::CloudVertex; incoming::Bool=true, o
   end
 
   loadtx = transaction(cg.neo4j.connection)
-  query = "match (node)-[:DEPENDENCE]-(another) where id(node) = $(vert.neo4jNodeId) return id(another)";
+  query = "match (node)$(incoming ? "<" : "")-[:DEPENDENCE]-$(outgoing ? ">" : "")(another) where id(node) = $(vert.neo4jNodeId) return id(another)";
   nodes = loadtx(query; submit=true)
   nodes = map(node -> getnode(cg.neo4j.graph, node["row"][1]), nodes.results[1]["data"])
   commit(loadtx)

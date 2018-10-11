@@ -2,7 +2,8 @@ language: julia
 os:
   - linux
 julia:
-  - 0.5
+  - 0.7
+  - 1.0
   - nightly
 notifications:
   email: false
@@ -11,6 +12,7 @@ services:
 matrix:
   allow_failures:
     - julia: nightly
+    - julia: 1.0
 before_install:
   - wget dist.neo4j.org/neo4j-community-2.3.4-unix.tar.gz
   - tar -xzf neo4j-community-2.3.4-unix.tar.gz
@@ -19,7 +21,7 @@ before_install:
   - neo4j-community-2.3.4/bin/neo4j start
 script:
   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-  - julia --check-bounds=yes -e 'Pkg.clone(pwd()); Pkg.test("CloudGraphs"; coverage=true)'
+  - julia --check-bounds=yes -e 'using Pkg; Pkg.clone(pwd()); Pkg.develop("LibBSON"); Pkg.test("CloudGraphs"; coverage=true)'
 
 after_success:
-  - julia -e 'cd(Pkg.dir("CloudGraphs")); Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'
+  - julia -e 'using Pkg; cd(Pkg.dir("CloudGraphs")); Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'
