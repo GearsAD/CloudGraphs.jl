@@ -1,4 +1,5 @@
 using Test
+using Neo4j
 using Graphs
 using ProtoBuf
 using JSON
@@ -47,7 +48,7 @@ function convert(T::Type{DataTest}, d::PackedDataTest) # decoder
   return DataTest(M1,d.string,M2)
 end
 
-# Creating a connection
+# Highly simplified packers and unpackers for testing.
 function testEncodePackedType(a::DataTest)
   return PackedDataTest(a)
 end
@@ -58,8 +59,6 @@ function testDecodePackedType(a::Any, b::Any)
   return convert(DataTest, a)
 end
 
-
-
 # Defaults
 if !haskey(ENV, "NEO4JUN")
     ENV["NEO4JUN"] = "neo4j"
@@ -67,9 +66,12 @@ end
 if !haskey(ENV, "NEO4JPW")
     ENV["NEO4JPW"] = "neo5j"
 end
-configuration = CloudGraphs.CloudGraphConfiguration("localhost", 7474, ENV["NEO4JUN"], ENV["NEO4JPW"], "localhost", 27017, false, "", "");
-# TODO replicate IIF.encodePackedType
-
+if !haskey(ENV, "MONGOUN")
+    ENV["MONGOUN"] = ""
+end
+if !haskey(ENV, "MONGOPW")
+    ENV["MONGOPW"] = ""
+end
+configuration = CloudGraphs.CloudGraphConfiguration("localhost", 7474, ENV["NEO4JUN"], ENV["NEO4JPW"], "localhost", 27017, false, ENV["MONGOUN"], ENV["MONGOPW"]);
 cloudGraph = connect(configuration, testEncodePackedType, testGetpackedtype, testDecodePackedType);
-# cloudGraph = connect(configuration, IncrementalInference.encodePackedType, Caesar.getpackedtype, IncrementalInference.decodePackedType);
 println("Success!");

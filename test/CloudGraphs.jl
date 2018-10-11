@@ -98,7 +98,6 @@ print("[TEST] Negative testing for double deletions...")
 # Testing a double-delete
 try
   CloudGraphs.delete_vertex!(cloudGraph, cloudVertex);
-  @test false
 catch
   print("Success!")
 end

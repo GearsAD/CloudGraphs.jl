@@ -125,7 +125,7 @@ mutable struct CloudEdge
   properties::Dict{AbstractString, Any} # UTF8String
   CloudEdge() = new(-1, nothing, "", -1, nothing, -1, nothing, Dict{AbstractString, Any}())
   # UTF8String
-  CloudEdge{T <: AbstractString}(vertexSrc::CloudVertex, vertexDest::CloudVertex, edgeType::T; props::Dict{T, Any}=Dict{T, Any}()) = new(
+  CloudEdge(vertexSrc::CloudVertex, vertexDest::CloudVertex, edgeType::T; props::Dict{T, Any}=Dict{T, Any}()) where {T <: AbstractString} = new(
     -1, nothing, string(edgeType), # utf8(edgeType)
     vertexSrc.neo4jNodeId,
     vertexSrc, #.neo4jNode,

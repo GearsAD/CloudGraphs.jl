@@ -1,7 +1,6 @@
 module CloudGraphs
 
 import Graphs: add_edge!, add_vertex!
-import Base: connect
 
 using Graphs
 using Neo4j
@@ -89,7 +88,6 @@ function cloudVertex2NeoProps(cg::CloudGraph, vertex::CloudVertex)
       pB = PipeBuffer();
 
       ## Dropping the type registration requirement
-      vertex.packed
       packedType = cg.encodePackedType(vertex.packed)
       ProtoBuf.writeproto(pB, packedType); # vertex.packed
       typeKey = string(typeof(packedType));
@@ -352,7 +350,7 @@ function get_neighbors(cg::CloudGraph, vert::CloudVertex; incoming::Bool=true, o
   end
 
   loadtx = transaction(cg.neo4j.connection)
-  query = "match (node)-[:DEPENDENCE]-(another) where id(node) = $(vert.neo4jNodeId) return id(another)";
+  query = "match (node)$(incoming ? "<" : "")-[:DEPENDENCE]-$(outgoing ? ">" : "")(another) where id(node) = $(vert.neo4jNodeId) return id(another)";
   nodes = loadtx(query; submit=true)
   nodes = map(node -> getnode(cg.neo4j.graph, node["row"][1]), nodes.results[1]["data"])
   commit(loadtx)
