@@ -8,7 +8,7 @@ export save_BigData!, read_BigData!, update_NeoBigDataEntries!, read_MongoData, 
 
 Insert or update the actual data payload into Mongo as required. Does not update Neo4j.
 """
-function _saveBigDataElement!(cg::CloudGraph, bDE::BigDataElement)::Void
+function _saveBigDataElement!(cg::CloudGraph, bDE::BigDataElement)::Nothing
   saveTime = string(Dates.now(Dates.UTC));
 
   # 1. Get the collection name, if set...
@@ -45,7 +45,7 @@ end
 
 Update the bigData dictionary elements in Neo4j. Does not insert or read from Mongo.
 """
-function update_NeoBigDataEntries!(cg::CloudGraph, vertex::CloudVertex)::Void
+function update_NeoBigDataEntries!(cg::CloudGraph, vertex::CloudVertex)::Nothing
   savedSets = Vector{savedSets = BigDataRawType}();
   for elem in vertex.bigData.dataElements
     # keep big data separate during Neo4j updates and remerge at end
@@ -69,7 +69,7 @@ function update_NeoBigDataEntries!(cg::CloudGraph, vertex::CloudVertex)::Void
   return(nothing)
 end
 
-function save_BigData!(cg::CloudGraph, vertex::CloudVertex)::Void
+function save_BigData!(cg::CloudGraph, vertex::CloudVertex)::Nothing
   #Write to Mongo
   for bDE in vertex.bigData.dataElements
     _saveBigDataElement!(cg, bDE);
@@ -107,7 +107,7 @@ function read_MongoData(cg::CloudGraph, bDE::BigDataElement)::BigDataRawType
     end
 end
 
-function delete_MongoData(cg::CloudGraph, bDE::BigDataElement)::Void
+function delete_MongoData(cg::CloudGraph, bDE::BigDataElement)::Nothing
     # 1. Get the collection name, if set...
     collection = cg.mongo.cgBindataCollection
     # DB customization for multitenancy
@@ -140,7 +140,7 @@ function read_BigData!(cg::CloudGraph, vertex::CloudVertex)::BigData
   return(vertex.bigData)
 end
 
-function delete_BigData!(cg::CloudGraph, vertex::CloudVertex)::Void
+function delete_BigData!(cg::CloudGraph, vertex::CloudVertex)::Nothing
   if(vertex.bigData.isExistingOnServer == false)
     error("The data does not exist on the server. 'isExistingOnServer' is false. Have you saved with set_BigData!()");
   end

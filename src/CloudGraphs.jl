@@ -9,6 +9,7 @@ using Mongo
 using LibBSON
 using ProtoBuf
 using JSON
+using Dates
 
 # extending methods
 
@@ -43,7 +44,7 @@ function disconnect(cloudGraph::CloudGraph)
 end
 
 # --- Common conversion functions ---
-function exVertex2CloudVertex(vertex::ExVertex)
+function exVertex2CloudVertex(vertex::ExVertex)::CloudVertex
   cgvProperties = Dict{String, Any}();
 
   #1. Get the special attributes - payload, etc.
@@ -68,7 +69,7 @@ function exVertex2CloudVertex(vertex::ExVertex)
   return CloudVertex(packed, cgvProperties, bigData, -1, nothing, false, vertex.index, false);
 end
 
-function cloudVertex2ExVertex(vertex::CloudVertex)
+function cloudVertex2ExVertex(vertex::CloudVertex)::Graphs.ExVertex
   # create an ExVertex
   vert = Graphs.ExVertex(vertex.exVertexId, vertex.properties["label"])
   vert.attributes = Graphs.AttributeDict()
@@ -86,9 +87,9 @@ function cloudVertex2NeoProps(cg::CloudGraph, vertex::CloudVertex)
   if(vertex.packed != "")
       # Packed information
       pB = PipeBuffer();
-      # typeKey="NoType"
 
       ## Dropping the type registration requirement
+      vertex.packed
       packedType = cg.encodePackedType(vertex.packed)
       ProtoBuf.writeproto(pB, packedType); # vertex.packed
       typeKey = string(typeof(packedType));
@@ -128,8 +129,6 @@ function unpackNeoNodeData2UsrType(cg::CloudGraph, neoNode::Neo4j.Node)
   pB = PipeBuffer(pData);
 
   typePackedRegName = props["packedType"];
-
-  # @show packedtype = cg.packedPackedDataTypes[typePackedRegName].packingType()
   packedtype = cg.getpackedtype(typePackedRegName) # combine in DFG, ProtoBuf
   packed = readproto(pB, packedtype); # TODO should be moved to common DIstributedFactorGraphs.jl
   fulltype = cg.decodePackedType(packed,typePackedRegName) # combine in DFG, ProtoBuf
@@ -190,7 +189,7 @@ end
 
 function add_vertex!(cg::CloudGraph, vertex::CloudVertex)::Int
   try
-    props = cloudVertex2NeoProps(cg, vertex)
+    @show props = cloudVertex2NeoProps(cg, vertex)
     vertex.neo4jNode = Neo4j.createnode(cg.neo4j.graph, props);
     # Set the labels
     if(length(vertex.labels) > 0)

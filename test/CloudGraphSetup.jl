@@ -1,5 +1,4 @@
-using Base: Test
-# using FactCheck # to be deprecated
+using Test
 using Graphs
 using ProtoBuf
 using JSON
@@ -11,23 +10,6 @@ import Base: convert
 # Have we loaded the library?
 @test isdefined(:CloudGraphs) == true
 @test typeof(CloudGraphs) == Module
-
-function testgetfnctype(x...)
-  @show x
-  error("CloudGraphSetup.jl:testgetfnctype(x...)  not implemented yet")
-end
-
-# Creating a connection
-@testset "[TEST] Connecting to the local CloudGraphs instance (Neo4j and Mongo)..." begin
-
-configuration = CloudGraphs.CloudGraphConfiguration("localhost", 7474, ENV["NEO4JUN"], ENV["NEO4JPW"], "localhost", 27017, false, "", "");
-# TODO replicate IIF.encodePackedType
-
-cloudGraph = connect(configuration, encodePackedType, getpackedtype, decodePackedType);
-# cloudGraph = connect(configuration, IncrementalInference.encodePackedType, Caesar.getpackedtype, IncrementalInference.decodePackedType);
-println("Success!");
-
-end
 
 # Testing type registration
 mutable struct DataTest
@@ -65,10 +47,29 @@ function convert(T::Type{DataTest}, d::PackedDataTest) # decoder
   return DataTest(M1,d.string,M2)
 end
 
-# println("[TEST] Registering a packed type and testing the Protobuf encoding/decoding...");
-# Let's register a packed type.
-# CloudGraphs.registerPackedType!(cloudGraph, DataTest, PackedDataTest, encodingConverter=convert, decodingConverter=convert);
-# println("Registered types = $(cloudGraph.packedPackedDataTypes)");
-# println("Registered types = $(cloudGraph.packedOriginalDataTypes)");
-# @test length(cloudGraph.packedPackedDataTypes) > 0
-# @test length(cloudGraph.packedOriginalDataTypes) > 0
+# Creating a connection
+function testEncodePackedType(a::DataTest)
+  return PackedDataTest(a)
+end
+function testGetpackedtype(a::Any)
+  return PackedDataTest()
+end
+function testDecodePackedType(a::Any, b::Any)
+  return convert(DataTest, a)
+end
+
+
+
+# Defaults
+if !haskey(ENV, "NEO4JUN")
+    ENV["NEO4JUN"] = "neo4j"
+end
+if !haskey(ENV, "NEO4JPW")
+    ENV["NEO4JPW"] = "neo5j"
+end
+configuration = CloudGraphs.CloudGraphConfiguration("localhost", 7474, ENV["NEO4JUN"], ENV["NEO4JPW"], "localhost", 27017, false, "", "");
+# TODO replicate IIF.encodePackedType
+
+cloudGraph = connect(configuration, testEncodePackedType, testGetpackedtype, testDecodePackedType);
+# cloudGraph = connect(configuration, IncrementalInference.encodePackedType, Caesar.getpackedtype, IncrementalInference.decodePackedType);
+println("Success!");

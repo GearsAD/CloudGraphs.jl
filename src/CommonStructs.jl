@@ -1,5 +1,6 @@
 using Neo4j
 using Mongo
+using UUIDs
 
 #Types
 export CloudGraphConfiguration, CloudGraph, CloudVertex, CloudEdge
@@ -22,7 +23,7 @@ mutable struct BigDataElement
     mimeType::String
     neoNodeId::Int
     lastSavedTimestamp::String #UTC DateTime.
-    BigDataElement(id::String, desc::String, data::BigDataRawType, neoNodeId::Int; sourceName::String="Mongo", sourceId::String=string(Base.Random.uuid4()), sourceParams::Dict{String, Any}=Dict{String, Any}(), mimeType::String="application/octet-stream", lastSavedTimestamp::String=string(now(Dates.UTC))) = begin
+    BigDataElement(id::String, desc::String, data::BigDataRawType, neoNodeId::Int; sourceName::String="Mongo", sourceId::String=string(uuid4()), sourceParams::Dict{String, Any}=Dict{String, Any}(), mimeType::String="application/octet-stream", lastSavedTimestamp::String=string(now(Dates.UTC))) = begin
         return new(sourceName, sourceId, sourceParams, id, desc, data, mimeType, neoNodeId, lastSavedTimestamp)
     end
     BigDataElement{T <: String}(dd::Dict{T,Any}, version::String) = begin
@@ -62,14 +63,14 @@ mutable struct CloudVertex
   properties::Dict{AbstractString, Any} # UTF8String
   bigData::BigData
   neo4jNodeId::Int
-  neo4jNode::Union{Void,Neo4j.Node}
+  neo4jNode::Union{Nothing, Neo4j.Node}
   labels::Vector{AbstractString}
   isValidNeoNodeId::Bool
   exVertexId::Int
   isValidExVertex::Bool
   CloudVertex() = new(Union, Dict{AbstractString, Any}(), BigData(), -1, nothing, Vector{AbstractString}(), false, -1, false)
-  CloudVertex{T <: AbstractString}(packed, properties, bigData::BigData, neo4jNodeId, neo4jNode, isValidNeoNodeId, exVertexId, isValidExVertex; labels::Vector{T}=Vector{String}()) = new(packed, properties, bigData, neo4jNodeId, neo4jNode, labels, isValidNeoNodeId, exVertexId, isValidExVertex)
-  CloudVertex{T <: AbstractString}(packed, properties, bigData::T, neo4jNodeId, neo4jNode, isValidNeoNodeId, exVertexId, isValidExVertex; labels::Vector{T}=Vector{String}()) = new(packed, properties, BigData(bigData), neo4jNodeId, neo4jNode, labels, isValidNeoNodeId, exVertexId, isValidExVertex)
+  CloudVertex(packed, properties, bigData::BigData, neo4jNodeId, neo4jNode, isValidNeoNodeId, exVertexId, isValidExVertex; labels::Vector{T}=Vector{String}()) where {T <: AbstractString} = new(packed, properties, bigData, neo4jNodeId, neo4jNode, labels, isValidNeoNodeId, exVertexId, isValidExVertex)
+  CloudVertex(packed, properties, bigData::T, neo4jNodeId, neo4jNode, isValidNeoNodeId, exVertexId, isValidExVertex; labels::Vector{T}=Vector{String}()) where {T <: AbstractString} = new(packed, properties, BigData(bigData), neo4jNodeId, neo4jNode, labels, isValidNeoNodeId, exVertexId, isValidExVertex)
 end
 
 # A single configuration type for a CloudGraph instance.
@@ -98,8 +99,8 @@ end
 mutable struct PackedType
   originalType::Type
   packingType::Type
-  encodingFunction::Union{Function, Void}
-  decodingFunction::Union{Function, Void}
+  encodingFunction::Union{Function, Nothing}
+  decodingFunction::Union{Function, Nothing}
 end
 
 # A CloudGraph instance
@@ -110,20 +111,17 @@ mutable struct CloudGraph
   encodePackedType::Function
   getpackedtype::Function
   decodePackedType::Function
-  packedPackedDataTypes::Dict{AbstractString, PackedType}
-  packedOriginalDataTypes::Dict{AbstractString, PackedType}
-  CloudGraph(configuration, neo4j, mongo, ept, gpt, dpt) = new(configuration, neo4j, mongo, ept, gpt, dpt, Dict{AbstractString, PackedType}(), Dict{AbstractString, PackedType}())
-  CloudGraph(configuration, neo4j, mongo, ept, gpt, dpt, packedDataTypes, originalDataTypes) = new(configuration, neo4j, mongo, ept, gpt, dpt, packedDataTypes, originalDataTypes)
+  CloudGraph(configuration, neo4j, mongo, ept, gpt, dpt) = new(configuration, neo4j, mongo, ept, gpt, dpt)
 end
 
 mutable struct CloudEdge
   neo4jEdgeId::Int
-  neo4jEdge::Union{Void,Neo4j.Relationship}
+  neo4jEdge::Union{Nothing,Neo4j.Relationship}
   edgeType::AbstractString #UTF8String
   neo4jSourceVertexId::Int
-  SourceVertex::Union{Void,CloudGraphs.CloudVertex}  #neo4jSourceVertex::Union{Void,Neo4j.Node}
+  SourceVertex::Union{Nothing,CloudGraphs.CloudVertex}  #neo4jSourceVertex::Union{Nothing,Neo4j.Node}
   neo4jDestVertexId::Int
-  DestVertex::Union{Void,CloudGraphs.CloudVertex}  #neo4jDestVertex::Union{Void,Neo4j.Node}
+  DestVertex::Union{Nothing,CloudGraphs.CloudVertex}  #neo4jDestVertex::Union{Nothing,Neo4j.Node}
   properties::Dict{AbstractString, Any} # UTF8String
   CloudEdge() = new(-1, nothing, "", -1, nothing, -1, nothing, Dict{AbstractString, Any}())
   # UTF8String

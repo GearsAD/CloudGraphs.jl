@@ -31,7 +31,8 @@ vertex.attributes["latestEstimate"] = [0.0,0.0,0.0];
 bigData = CloudGraphs.BigData();
 testElementLegacy = CloudGraphs.BigDataElement("TestLegacy", "Performance test dataset legacy.", rand(UInt8,100), -1); #Data element
 testElementDict = CloudGraphs.BigDataElement("TestDictSet", "Performance test dataset new dict type.", Dict{String, Any}("testString"=>"Test String", "randUint8"=>rand(UInt8,100)), -1); #Data element
-append!(bigData.dataElements, [testElementLegacy, testElementDict]);
+# TODO: Check BigData scenarios.
+# append!(bigData.dataElements, [testElementLegacy, testElementDict]);
 vertex.attributes["bigData"] = bigData;
 # Now encoding the structure to CloudGraphs vertex
 cloudVertex = CloudGraphs.exVertex2CloudVertex(vertex);
