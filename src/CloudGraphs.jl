@@ -187,7 +187,7 @@ end
 
 function add_vertex!(cg::CloudGraph, vertex::CloudVertex)::Int
   try
-    @show props = cloudVertex2NeoProps(cg, vertex)
+    props = cloudVertex2NeoProps(cg, vertex)
     vertex.neo4jNode = Neo4j.createnode(cg.neo4j.graph, props);
     # Set the labels
     if(length(vertex.labels) > 0)
