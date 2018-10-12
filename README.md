@@ -39,7 +39,7 @@ This package is extensively used by the [Caesar.jl](http://www.github.com/dehann
 [build-img]: https://travis-ci.org/GearsAD/CloudGraphs.jl.svg?branch=master
 [build-url]: https://travis-ci.org/GearsAD/CloudGraphs.jl
 
-[cg-badge-v0.5]: http://pkg.julialang.org/badges/CloudGraphs_0.5.svg
-[cg-pkg-v0.5]: http://pkg.julialang.org/?pkg=CloudGraphs&ver=0.5
-[cg-badge-v0.6]: http://pkg.julialang.org/badges/CloudGraphs_0.6.svg
-[cg-pkg-v0.6]: http://pkg.julialang.org/?pkg=CloudGraphs&ver=0.6
+[cg-badge-v0.7]: http://pkg.julialang.org/badges/CloudGraphs_0.7.svg
+[cg-pkg-v0.7]: http://pkg.julialang.org/?pkg=CloudGraphs&ver=0.7
+[cg-badge-v1.0]: http://pkg.julialang.org/badges/CloudGraphs_1.0.svg
+[cg-pkg-v1.0]: http://pkg.julialang.org/?pkg=CloudGraphs&ver=1.0
