@@ -26,6 +26,7 @@ This package is extensively used by the [Caesar.jl](http://www.github.com/dehann
 ## Contributors
 
 - GearsAD
+- Dehann
 
 # References
 
