@@ -3,8 +3,8 @@
 # CloudGraphs.jl
 
 [![Build Status][build-img]][build-url]
-[![CloudGraphs][cg-badge-v0.5]][cg-pkg-v0.5]
-[![CloudGraphs][cg-badge-v0.6]][cg-pkg-v0.6]
+[![CloudGraphs][cg-badge-v0.7]][cg-pkg-v0.7]
+[![CloudGraphs][cg-badge-v1.0]][cg-pkg-v1.0]
 
 Repository for the CloudGraphs project, an ongoing project on http://semisortedblog.wordpress.com.
 
