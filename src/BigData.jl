@@ -15,9 +15,11 @@ function _saveBigDataElement!(cg::CloudGraph, bDE::BigDataElement)::Nothing
   collection = cg.mongo.cgBindataCollection
   # DB customization for multitenancy
   if(haskey(bDE.sourceParams, "database") && haskey(bDE.sourceParams, "collection"))
-      collection = Mongo.MongoCollection(cg.mongo.client, bDE.sourceParams["database"], bDE.sourceParams["collection"]);
+      # collection = Mongo.MongoCollection(cg.mongo.client, bDE.sourceParams["database"], bDE.sourceParams["collection"]);
+      collection = cg.mongo.client[bDE.sourceParams["database"]][bDE.sourceParams["collection"]]
   elseif(haskey(bDE.sourceParams, "collection"))
-      collection = Mongo.MongoCollection(cg.mongo.client, _mongoDefaultDb, bDE.sourceParams["collection"]);
+      # collection = Mongo.MongoCollection(cg.mongo.client, _mongoDefaultDb, bDE.sourceParams["collection"]);
+      collection = cg.mongo.client[_mongoDefaultDb][bDE.sourceParams["collection"]]
   end
 
   # 2. Check if the key exists...
@@ -85,9 +87,11 @@ function read_MongoData(cg::CloudGraph, bDE::BigDataElement)::BigDataRawType
     collection = cg.mongo.cgBindataCollection
     # DB customization for multitenancy
     if(haskey(bDE.sourceParams, "database") && haskey(bDE.sourceParams, "collection"))
-        collection = Mongo.MongoCollection(cg.mongo.client, bDE.sourceParams["database"], bDE.sourceParams["collection"]);
+        # collection = Mongo.MongoCollection(cg.mongo.client, bDE.sourceParams["database"], bDE.sourceParams["collection"]);
+        collection = cg.mongo.client[bDE.sourceParams["database"]][bDE.sourceParams["collection"]]
     elseif(haskey(bDE.sourceParams, "collection"))
-        collection = Mongo.MongoCollection(cg.mongo.client, _mongoDefaultDb, bDE.sourceParams["collection"]);
+        # collection = Mongo.MongoCollection(cg.mongo.client, _mongoDefaultDb, bDE.sourceParams["collection"]);
+        collection = cg.mongo.client[_mongoDefaultDb][bDE.sourceParams["collection"]]
     end
 
     # 2. See if the element exists
@@ -112,9 +116,11 @@ function delete_MongoData(cg::CloudGraph, bDE::BigDataElement)::Nothing
     collection = cg.mongo.cgBindataCollection
     # DB customization for multitenancy
     if(haskey(bDE.sourceParams, "database") && haskey(bDE.sourceParams, "collection"))
-        collection = Mongo.MongoCollection(cg.mongo.client, bDE.sourceParams["database"], bDE.sourceParams["collection"]);
+        collection = cg.mongo.client[bDE.sourceParams["database"]][bDE.sourceParams["collection"]]
+        # collection = Mongo.MongoCollection(cg.mongo.client, bDE.sourceParams["database"], bDE.sourceParams["collection"]);
     elseif(haskey(bDE.sourceParams, "collection"))
-        collection = Mongo.MongoCollection(cg.mongo.client, _mongoDefaultDb, bDE.sourceParams["collection"]);
+        collection = cg.mongo.client[_mongoDefaultDb][bDE.sourceParams["collection"]]
+        # collection = Mongo.MongoCollection(cg.mongo.client, _mongoDefaultDb, bDE.sourceParams["collection"]);
     end
 
     # 2. See if the element exists

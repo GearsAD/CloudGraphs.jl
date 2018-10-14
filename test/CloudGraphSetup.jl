@@ -4,7 +4,8 @@ using Graphs
 using ProtoBuf
 using JSON
 using CloudGraphs
-using LibBSON
+# using LibBSON
+using Mongoc
 
 import Base: convert
 
@@ -64,7 +65,7 @@ if !haskey(ENV, "NEO4JUN")
     ENV["NEO4JUN"] = "neo4j"
 end
 if !haskey(ENV, "NEO4JPW")
-    ENV["NEO4JPW"] = "neo5j"
+    ENV["NEO4JPW"] = "marine"
 end
 if !haskey(ENV, "MONGOUN")
     ENV["MONGOUN"] = ""

@@ -23,7 +23,7 @@ append!(bigData.dataElements, [testElement]);
 # Now encoding the structure to CloudGraphs vertex
 cloudVertex = CloudGraphs.exVertex2CloudVertex(vertex);
 
-using Mongo
+using Mongoc
 # function localscope(N=1000000)
   data = ("testId" => Array(UInt8, 10), "description" => "DESCRIPTION")
   @time m_oid = insert(cloudGraph.mongo.cgBindataCollection, data)

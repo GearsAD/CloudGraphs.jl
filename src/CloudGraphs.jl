@@ -4,8 +4,9 @@ import Graphs: add_edge!, add_vertex!
 
 using Graphs
 using Neo4j
-using Mongo
-using LibBSON
+# using Mongo
+# using LibBSON
+using Mongoc
 using ProtoBuf
 using JSON
 using Dates
@@ -30,9 +31,13 @@ function connect(configuration::CloudGraphConfiguration, encodefnc::Function, gp
   neoConn = Neo4j.Connection(configuration.neo4jHost, port=configuration.neo4jPort, user=configuration.neo4jUsername, password=configuration.neo4jPassword);
   neo4j = Neo4jInstance(neoConn, Neo4j.getgraph(neoConn));
 
-  mongoClient = configuration.mongoIsUsingCredentials ? Mongo.MongoClient(configuration.mongoHost, configuration.mongoPort, configuration.mongoUsername, configuration.mongoPassword) : Mongo.MongoClient(configuration.mongoHost, configuration.mongoPort)
-  cgBindataCollection = Mongo.MongoCollection(mongoClient, _mongoDefaultDb, _mongoDefaultCollection);
+  mongostr = "mongodb://" * configuration.mongoUsername * ":"* configuration.mongoPassword * "@" * configuration.mongoHost * "/?authSource=admin"
+  mongoClient = configuration.mongoIsUsingCredentials ? Mongoc.Client(mongostr) : Mongoc.Client(configuration.mongoHost, configuration.mongoPort)
+  cgBindataCollection = mongoClient[_mongoDefaultDb][_mongoDefaultCollection]
   mongoInstance = MongoDbInstance(mongoClient, cgBindataCollection);
+  # mongoClient = configuration.mongoIsUsingCredentials ? Mongo.MongoClient(configuration.mongoHost, configuration.mongoPort, configuration.mongoUsername, configuration.mongoPassword) : Mongo.MongoClient(configuration.mongoHost, configuration.mongoPort)
+  # cgBindataCollection = Mongo.MongoCollection(mongoClient, _mongoDefaultDb, _mongoDefaultCollection);
+  # mongoInstance = MongoDbInstance(mongoClient, cgBindataCollection);
 
   return CloudGraph(configuration, neo4j, mongoInstance, encodefnc, gpt, dpt);
 end
