@@ -226,7 +226,7 @@ function get_vertex(cg::CloudGraph, neoNodeId::Int, retrieveBigData::Bool)
     return(cgVertex)
 end
 
-function update_vertex!(cg::CloudGraph, vertex::CloudVertex, updateBigData::Bool)::Void
+function update_vertex!(cg::CloudGraph, vertex::CloudVertex, updateBigData::Bool)::Nothing
   try
     if(vertex.neo4jNode == nothing)
       error("There isn't a Neo4j Node associated with this CloudVertex. You might want to call add_vertex instead of update_vertex.");
@@ -250,7 +250,7 @@ function update_vertex!(cg::CloudGraph, vertex::CloudVertex, updateBigData::Bool
   end
 end
 
-function delete_vertex!(cg::CloudGraph, vertex::CloudVertex)::Void
+function delete_vertex!(cg::CloudGraph, vertex::CloudVertex)::Nothing
   if(vertex.neo4jNode == nothing)
     error("There isn't a Neo4j Node associated with this CloudVertex.");
   end

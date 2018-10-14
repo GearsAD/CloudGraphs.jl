@@ -52,7 +52,7 @@ cloudVertexRet = CloudGraphs.get_vertex(cloudGraph, cloudVertex.neo4jNode.id, fa
 @show "Received = ", json(cloudVertexRet.properties)
 @test json(cloudVertex.properties) == json(cloudVertexRet.properties)
 @test cloudVertex.neo4jNodeId == cloudVertexRet.neo4jNodeId
-@test cloudVertexRet.neo4jNode != Void
+@test cloudVertexRet.neo4jNode != Nothing
 println("Success!")
 
 print("[TEST] Testing the update method...")
