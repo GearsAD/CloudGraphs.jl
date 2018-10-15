@@ -67,7 +67,7 @@ end
 Update the bigData dictionary elements in Neo4j. Does not insert or read from Mongo.
 """
 function update_NeoBigDataEntries!(cg::CloudGraph, vertex::CloudVertex)::Nothing
-  savedSets = Vector{savedSets = BigDataRawType}();
+  savedSets = Vector{BigDataRawType}(); #Vector{savedSets = BigDataRawType}();
   for elem in vertex.bigData.dataElements
     # keep big data separate during Neo4j updates and remerge at end
     push!(savedSets, elem.data);
