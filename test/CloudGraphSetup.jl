@@ -10,7 +10,7 @@ using Mongoc
 import Base: convert
 
 # Have we loaded the library?
-@test isdefined(:CloudGraphs) == true
+@test isdefined(Main, :CloudGraphs) == true
 @test typeof(CloudGraphs) == Module
 
 # Testing type registration

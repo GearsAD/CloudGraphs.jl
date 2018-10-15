@@ -1,7 +1,7 @@
 using CloudGraphs
 using Test
 
-@test isdefined(:CloudGraphs)
+@test isdefined(Main, :CloudGraphs)
 @test typeof(CloudGraphs) == Module
 
 #include("QuickPackProtoTest.jl")
