@@ -11,7 +11,7 @@ _mongoDefaultDb = "CloudGraphs"
 _mongoDefaultCollection = "bindata"
 
 # Type aliases
-BigDataRawType = Union{Vector{UInt8}, Dict{String, Any}, String}
+BigDataRawType = Union{Vector{UInt8}, Dict{String, Any}, String, Dict{Any, Any}}
 
 mutable struct BigDataElement
     sourceName::String

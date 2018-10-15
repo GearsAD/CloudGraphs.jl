@@ -103,7 +103,7 @@ function cloudVertex2NeoProps(cg::CloudGraph, vertex::CloudVertex)
   # Big data
   # Write it.
   # Clear the underlying data in the Neo4j dataset and serialize the big data.
-  savedSets = Vector{Union{Vector{UInt8}, Dict{String, Any}}}();
+  savedSets = Vector{Union{Vector{UInt8}, Dict{String, Any}, Dict{Any, Any}, String}}();  # like so?
   for elem in vertex.bigData.dataElements
     push!(savedSets, elem.data);
     elem.data = Dict{String, Any}();
@@ -128,7 +128,7 @@ function unpackNeoNodeData2UsrType(cg::CloudGraph, neoNode::Neo4j.Node)
   if !haskey(props, "data")
     error("dont have data field in neoNode id=$(neoNode.id)")
   end
-  pData = convert(Array{UInt8}, props["data"]);
+  pData = convert(Array{UInt8,1}, props["data"]);
   pB = PipeBuffer(pData);
 
   typePackedRegName = props["packedType"];
@@ -216,12 +216,12 @@ function get_vertex(cg::CloudGraph, neoNodeId::Int, retrieveBigData::Bool)
     neoNode = Neo4j.getnode(cg.neo4j.graph, neoNodeId);
     cgVertex = neoNode2CloudVertex(cg, neoNode);
     if(retrieveBigData && cgVertex.bigData.isExistingOnServer)
-    try
         read_BigData!(cg, cgVertex);
-    catch ex
-        println(catch_stacktrace())
-        warn("Unable to retrieve bigData for node ID '$(neoNodeId)' - $(ex)")
-    end
+    # try
+    # catch ex
+    #     println(catch_stacktrace())
+    #     @warn "Unable to retrieve bigData for node ID '$(neoNodeId)' - $(ex)"
+    # end
     end
     return(cgVertex)
 end
@@ -240,7 +240,7 @@ function update_vertex!(cg::CloudGraph, vertex::CloudVertex, updateBigData::Bool
 
     # Update the BigData
     if(updateBigData)
-        info("Updating bigData for node $(vertex.neo4jNodeId)...")
+        @info "Updating bigData for node $(vertex.neo4jNodeId)..."
         save_BigData!(cg, vertex)
     end
 
@@ -259,7 +259,7 @@ function delete_vertex!(cg::CloudGraph, vertex::CloudVertex)::Nothing
     delete_BigData!(cg, vertex)
   catch ex
     if(isa(ex, ErrorException))
-        warn("Unable to completely delete bigData for node $(vertex.neo4jNodeId) - $(ex)")
+        @warn "Unable to completely delete bigData for node $(vertex.neo4jNodeId) - $(ex)"
     else
         error(ex)
     end
@@ -363,7 +363,7 @@ function get_neighbors(cg::CloudGraph, vert::CloudVertex; incoming::Bool=true, o
   neighbors = CloudVertex[]
   for neoNeighbor in nodes
     if !haskey(neoNeighbor.data, "data") && needdata
-      warn("skip neighbor if not in the subgraph segment of interest, neonodeid=$(neoNeighbor.id)")
+      @warn "skip neighbor if not in the subgraph segment of interest, neonodeid=$(neoNeighbor.id)"
       continue;
     end
     push!(neighbors, neoNode2CloudVertex(cg, neoNeighbor))

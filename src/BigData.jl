@@ -15,29 +15,48 @@ function _saveBigDataElement!(cg::CloudGraph, bDE::BigDataElement)::Nothing
   collection = cg.mongo.cgBindataCollection
   # DB customization for multitenancy
   if(haskey(bDE.sourceParams, "database") && haskey(bDE.sourceParams, "collection"))
-      # collection = Mongo.MongoCollection(cg.mongo.client, bDE.sourceParams["database"], bDE.sourceParams["collection"]);
       collection = cg.mongo.client[bDE.sourceParams["database"]][bDE.sourceParams["collection"]]
   elseif(haskey(bDE.sourceParams, "collection"))
-      # collection = Mongo.MongoCollection(cg.mongo.client, _mongoDefaultDb, bDE.sourceParams["collection"]);
       collection = cg.mongo.client[_mongoDefaultDb][bDE.sourceParams["collection"]]
   end
 
   # 2. Check if the key exists...
   isNew = true;
   if(bDE.sourceId != "")
-    numNodes = count(collection, ("cgId" => bDE.sourceId)); #NOT the oid, this is another indexable list
+    numNodes = length(collection, Mongoc.BSON("""{ "cgId": "$(bDE.sourceId)" }""") )
     isNew = numNodes == 0;
   end
   if(isNew)
     # Insert the node (additional parameters for user readability, data is all that matters)
-    m_oid = insert(collection, ("cgId" =>  bDE.sourceId, "elementId" => bDE.id, "description" => bDE.description, "data" => bDE.data, "mimeType" => bDE.mimeType, "neoNodeId" => bDE.neoNodeId, "lastSavedTimestamp" => saveTime))
-    info("Inserted big data to mongo id = $(m_oid) for cgId = $(bDE.id)")
+    bsonDoc = Mongoc.BSON()
+    bsonDoc["cgId"] = bDE.sourceId
+    bsonDoc["elementId"] = bDE.id
+    bsonDoc["description"] = bDE.description
+    bsonDoc["data"] = bDE.data
+    bsonDoc["mimeType"] = bDE.mimeType
+    bsonDoc["neoNodeId"] = bDE.neoNodeId
+    bsonDoc["lastSavedTimestamp"] = saveTime
+    m_oid = push!(collection, bsonDoc)
+    # m_oid = insert(collection, ("cgId" =>  bDE.sourceId, "elementId" => bDE.id, "description" => bDE.description, "data" => bDE.data, "mimeType" => bDE.mimeType, "neoNodeId" => bDE.neoNodeId, "lastSavedTimestamp" => saveTime))
+    @info "Inserted big data to mongo id = $(m_oid) for cgId = $(bDE.id)"
   else
     # Update the node
-    m_oid = update(collection, ("cgId" => bDE.sourceId), set("elementId" => bDE.id, "description" => bDE.description, "data" => bDE.data, "mimeType" => bDE.mimeType, "neoNodeId" => bDE.neoNodeId, "lastSavedTimestamp" => saveTime))
-    info("Updated big data to mongo id (result=$(m_oid)) for cgId $(bDE.id)")
+    selector = Mongoc.BSON("""{ "cgId": "$(bDE.sourceId)" }""")
+    bsonDoc = Mongoc.BSON()
+    # bsonDoc["cgId"] = bDE.sourceId # this is the selector we are using, so don't update
+    bsonDoc["elementId"] = bDE.id
+    bsonDoc["description"] = bDE.description
+    bsonDoc["data"] = bDE.data
+    bsonDoc["mimeType"] = bDE.mimeType
+    bsonDoc["neoNodeId"] = bDE.neoNodeId
+    bsonDoc["lastSavedTimestamp"] = saveTime
+    setDoc = Mongoc.BSON()
+    setDoc["\$set"] = bsonDoc
+    m_oid = Mongoc.update_one(collection, selector, setDoc)
+    # m_oid = update(collection, ("cgId" => bDE.sourceId), set("elementId" => bDE.id, "description" => bDE.description, "data" => bDE.data, "mimeType" => bDE.mimeType, "neoNodeId" => bDE.neoNodeId, "lastSavedTimestamp" => saveTime))
+    @info "Updated big data to mongo id (result=$(m_oid)) for cgId $(bDE.id)"
   end
-  return(nothing)
+  return nothing
 end
 
 # ------
@@ -95,17 +114,20 @@ function read_MongoData(cg::CloudGraph, bDE::BigDataElement)::BigDataRawType
     end
 
     # 2. See if the element exists
-    numNodes = count(collection, ("cgId" => bDE.sourceId));
+    numNodes = length(collection, Mongoc.BSON("""{ "cgId": "$(bDE.sourceId)" }""") )
+    # numNodes = count(collection, ("cgId" => bDE.sourceId));
     if(numNodes != 1)
       error("The query for data elements named $(bDE.id) with Mongo CGID $(bDE.sourceId) returned $(numNodes) values, expected 1 result for this element!");
     end
-    results = first(find(collection, ("cgId" => bDE.sourceId)))
+    results = Mongoc.find_one(collection, Mongoc.BSON("""{ "cgId": "$(bDE.sourceId)" }""") )
+    # results = first(find(collection, ("cgId" => bDE.sourceId)))
 
     #Have it, now parse it until we have a native binary or dictionary datatype.
     # If new type, convert back to dictionary
-    if(typeof(results["data"]) == BSONObject)
-        testOutput = dict(results["data"]);
-        return convert(Dict{String, Any}, testOutput) #From {Any, Any} to a more comfortable stronger type
+
+    if(typeof(results) == Mongoc.BSON)
+        return Mongoc.as_dict(results)["data"]      # testOutput = dict(results["data"]);
+        # return convert(Dict{String, Any}, testOutput) #From {Any, Any} to a more comfortable stronger type
     else
         return results["data"];
     end
@@ -124,12 +146,14 @@ function delete_MongoData(cg::CloudGraph, bDE::BigDataElement)::Nothing
     end
 
     # 2. See if the element exists
-    numNodes = count(collection, ("cgId" => bDE.sourceId));
+    selector = Mongoc.BSON("""{ "cgId": "$(bDE.sourceId)" }""")
+    numNodes = length(collection, selector);
+
     if(numNodes != 1)
       error("The query for data elements named $(bDE.id) with Mongo CGID $(bDE.sourceId) returned $(numNodes) values, expected 1 result for this element!");
     end
-    delete(collection, ("cgId" => bDE.sourceId))
-    info("Deleted big data mongo id = $(bDE.sourceId) for cgId = $(bDE.id)")
+    Mongoc.delete_one(collection, selector)
+    @info "Deleted big data mongo id = $(bDE.sourceId) for cgId = $(bDE.id)"
 
     return(nothing)
 end
