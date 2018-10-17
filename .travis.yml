@@ -21,7 +21,7 @@ before_install:
   - neo4j-community-2.3.4/bin/neo4j start
 script:
   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-  - julia --check-bounds=yes -e 'using Pkg; Pkg.clone(pwd()); Pkg.develop("LibBSON"); Pkg.test("CloudGraphs"; coverage=true)'
+  - julia --check-bounds=yes -e 'using Pkg; Pkg.clone(pwd()); Pkg.develop("Mongoc"); Pkg.test("CloudGraphs"; coverage=true)'
 
 after_success:
   - julia -e 'using Pkg; cd(Pkg.dir("CloudGraphs")); Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'
