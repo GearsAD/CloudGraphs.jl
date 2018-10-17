@@ -1,5 +1,5 @@
 using Neo4j
-using Mongo
+using Mongoc
 using UUIDs
 
 #Types
@@ -11,7 +11,7 @@ _mongoDefaultDb = "CloudGraphs"
 _mongoDefaultCollection = "bindata"
 
 # Type aliases
-BigDataRawType = Union{Vector{UInt8}, Dict{String, Any}, String}
+BigDataRawType = Union{Vector{UInt8}, Dict{String, Any}, String, Dict{Any, Any}}
 
 mutable struct BigDataElement
     sourceName::String
@@ -26,7 +26,7 @@ mutable struct BigDataElement
     BigDataElement(id::String, desc::String, data::BigDataRawType, neoNodeId::Int; sourceName::String="Mongo", sourceId::String=string(uuid4()), sourceParams::Dict{String, Any}=Dict{String, Any}(), mimeType::String="application/octet-stream", lastSavedTimestamp::String=string(now(Dates.UTC))) = begin
         return new(sourceName, sourceId, sourceParams, id, desc, data, mimeType, neoNodeId, lastSavedTimestamp)
     end
-    BigDataElement{T <: String}(dd::Dict{T,Any}, version::String) = begin
+    BigDataElement(dd::Dict{T,Any}, version::String) where {T <: String} = begin
         if(version == "1")
             return new("Mongo", dd["mongoKey"], Dict{String, Any}(), dd["mongoKey"], dd["description"], dd["data"], "application/octet-stream", dd["neoNodeId"], dd["lastSavedTimestamp"])
         elseif(version == "2")
@@ -92,8 +92,8 @@ mutable struct Neo4jInstance
 end
 
 mutable struct MongoDbInstance
-  client::Mongo.MongoClient
-  cgBindataCollection::MongoCollection
+  client::Mongoc.Client
+  cgBindataCollection #::MongoCollection
 end
 
 mutable struct PackedType

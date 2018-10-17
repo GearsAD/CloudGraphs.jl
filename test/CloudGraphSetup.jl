@@ -4,12 +4,13 @@ using Graphs
 using ProtoBuf
 using JSON
 using CloudGraphs
-using LibBSON
+# using LibBSON
+using Mongoc
 
 import Base: convert
 
 # Have we loaded the library?
-@test isdefined(:CloudGraphs) == true
+@test isdefined(Main, :CloudGraphs) == true
 @test typeof(CloudGraphs) == Module
 
 # Testing type registration
@@ -64,7 +65,7 @@ if !haskey(ENV, "NEO4JUN")
     ENV["NEO4JUN"] = "neo4j"
 end
 if !haskey(ENV, "NEO4JPW")
-    ENV["NEO4JPW"] = "neo5j"
+    ENV["NEO4JPW"] = "marine"
 end
 if !haskey(ENV, "MONGOUN")
     ENV["MONGOUN"] = ""
