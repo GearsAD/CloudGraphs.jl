@@ -126,7 +126,8 @@ function read_MongoData(cg::CloudGraph, bDE::BigDataElement)::BigDataRawType
     # If new type, convert back to dictionary
 
     if(typeof(results) == Mongoc.BSON)
-        return Mongoc.as_dict(results)["data"]      # testOutput = dict(results["data"]);
+        dict = Mongoc.as_dict(results)
+        return dict["data"]      # testOutput = dict(results["data"]);
         # return convert(Dict{String, Any}, testOutput) #From {Any, Any} to a more comfortable stronger type
     else
         return results["data"];
