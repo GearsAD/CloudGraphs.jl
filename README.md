@@ -5,6 +5,7 @@
 [![Build Status][build-img]][build-url]
 [![CloudGraphs][cg-badge-v0.7]][cg-pkg-v0.7]
 [![CloudGraphs][cg-badge-v1.0]][cg-pkg-v1.0]
+[![codecov.io][cov-img]][cov-url]
 
 Repository for the CloudGraphs project, an ongoing project on http://semisortedblog.wordpress.com.
 
