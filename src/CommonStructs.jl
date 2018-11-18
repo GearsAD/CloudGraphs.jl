@@ -75,15 +75,15 @@ end
 
 # A single configuration type for a CloudGraph instance.
 struct CloudGraphConfiguration
-  neo4jHost::AbstractString # UTF8String
+  neo4jHost::String
   neo4jPort::Int
-  neo4jUsername::AbstractString # UTF8String
-  neo4jPassword::AbstractString # UTF8String
-  mongoHost::AbstractString # UTF8String
+  neo4jUsername::String
+  neo4jPassword::String
+  mongoHost::String
   mongoPort::Int
   mongoIsUsingCredentials::Bool
-  mongoUsername::AbstractString # UTF8String
-  mongoPassword::AbstractString # UTF8String
+  mongoUsername::String
+  mongoPassword::String
 end
 
 mutable struct Neo4jInstance
