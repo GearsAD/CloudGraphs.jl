@@ -75,7 +75,7 @@ end
 
 function cloudVertex2ExVertex(vertex::CloudVertex)::Graphs.ExVertex
   # create an ExVertex
-  vert = Graphs.ExVertex(vertex.exVertexId, vertex.properties["label"])
+  vert = Graphs.ExVertex(vertex.exVertexId, string(vertex.properties["label"]))
   vert.attributes = Graphs.AttributeDict()
   vert.attributes = vertex.properties
 
@@ -121,13 +121,8 @@ function cloudVertex2NeoProps(cg::CloudGraph, vertex::CloudVertex)
   return props;
 end
 
-function unpackNeoNodeData2UsrType(cg::CloudGraph, neoNode::Neo4j.Node)
-  props = neoNode.data;
 
-  # Unpack the packed data using an interim UInt8[].
-  if !haskey(props, "data")
-    error("dont have data field in neoNode id=$(neoNode.id)")
-  end
+function unpackNeoNodeData2UsrType(cg::CloudGraph, props::Dict)
   pData = convert(Array{UInt8,1}, props["data"]);
   pB = PipeBuffer(pData);
 
@@ -136,6 +131,17 @@ function unpackNeoNodeData2UsrType(cg::CloudGraph, neoNode::Neo4j.Node)
   packed = readproto(pB, packedtype); # TODO should be moved to common DIstributedFactorGraphs.jl
   fulltype = cg.decodePackedType(packed,typePackedRegName) # combine in DFG, ProtoBuf
   return fulltype
+end
+
+function unpackNeoNodeData2UsrType(cg::CloudGraph, neoNode::Neo4j.Node)
+  props = neoNode.data;
+
+  # Unpack the packed data using an interim UInt8[].
+  if !haskey(props, "data")
+    error("dont have data field in neoNode id=$(neoNode.id)")
+  end
+
+  return unpackNeoNodeData2UsrType(cg, props)
 end
 
 
