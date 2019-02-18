@@ -49,35 +49,31 @@ end
 
 # --- Common conversion functions ---
 function exVertex2CloudVertex(vertex::ExVertex)::CloudVertex
-  cgvProperties = Dict{String, Any}();
-
   #1. Get the special attributes - payload, etc.
   propNames = keys(vertex.attributes);
-  if("bigData" in propNames) #We have big data to save.
-    bigData = vertex.attributes["bigData"];
-  else
-    bigData = BigData();
-  end
-  if haskey(vertex.attributes, "data") #("data" in propNames) #We have protobuf stuff to save in the node.
-    packed = vertex.attributes["data"];
-  else
-    packed = "";
-  end
+  #We have big data to save.
+  bigData = "bigData" in propNames ? vertex.attributes["bigData"] : BigData();
+  #We have protobuf stuff to save in the node.
+  packed = haskey(vertex.attributes, "data") ? vertex.attributes["data"] : "";
+  labels = haskey(vertex.attributes, "tags") ? vertex.attributes["tags"] : String[];
+
   #2. Transfer everything else to properties
+  cgvProperties = Dict{String, Any}();
   for (k,v) in vertex.attributes
-    if(k != "bigData" && k != "data")
+    if(k != "bigData" && k != "data" && k != "labels")
       cgvProperties[k] = v;
     end
   end
   #3. Encode the packed data and big data.
-  return CloudVertex(packed, cgvProperties, bigData, -1, nothing, false, vertex.index, false);
+  return CloudVertex(packed, cgvProperties, bigData, -1, nothing, false, vertex.index, false, labels=labels);
 end
 
 function cloudVertex2ExVertex(vertex::CloudVertex)::Graphs.ExVertex
   # create an ExVertex
   vert = Graphs.ExVertex(vertex.exVertexId, vertex.properties["label"])
-  vert.attributes = Graphs.AttributeDict()
+  # vert.attributes = Graphs.AttributeDict()
   vert.attributes = vertex.properties
+  vert.attributes["tags"] = vertex.labels
 
   # populate the data container
   vert.attributes["data"] = vertex.packed
