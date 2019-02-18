@@ -54,7 +54,7 @@ function exVertex2CloudVertex(vertex::ExVertex)::CloudVertex
   #We have big data to save.
   bigData = "bigData" in propNames ? vertex.attributes["bigData"] : BigData();
   #We have protobuf stuff to save in the node.
-  packed = haskey(vertex.attributes, "data") ? vertex.attributes["data"] : packed = "";
+  packed = haskey(vertex.attributes, "data") ? vertex.attributes["data"] : "";
   labels = haskey(vertex.attributes, "tags") ? vertex.attributes["tags"] : String[];
 
   #2. Transfer everything else to properties
